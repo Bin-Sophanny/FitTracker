@@ -1,0 +1,204 @@
+package com.example.fittrack.ui.screens
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import java.text.SimpleDateFormat
+import java.util.*
+
+// Mock data class for daily fitness stats
+data class DailyStats(
+    val date: String,
+    val steps: Int,
+    val calories: Int,
+    val distance: Float,
+    val activeMinutes: Int
+)
+
+// Mock data for demonstration
+fun getMockFitnessData(): List<DailyStats> {
+    val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+    val calendar = Calendar.getInstance()
+
+    return listOf(
+        DailyStats(
+            date = dateFormat.format(calendar.time),
+            steps = 8450,
+            calories = 420,
+            distance = 6.2f,
+            activeMinutes = 45
+        ),
+        DailyStats(
+            date = dateFormat.format(calendar.apply { add(Calendar.DAY_OF_YEAR, -1) }.time),
+            steps = 12250,
+            calories = 580,
+            distance = 9.1f,
+            activeMinutes = 68
+        ),
+        DailyStats(
+            date = dateFormat.format(calendar.apply { add(Calendar.DAY_OF_YEAR, -1) }.time),
+            steps = 6780,
+            calories = 310,
+            distance = 5.0f,
+            activeMinutes = 32
+        ),
+        DailyStats(
+            date = dateFormat.format(calendar.apply { add(Calendar.DAY_OF_YEAR, -1) }.time),
+            steps = 15420,
+            calories = 720,
+            distance = 11.3f,
+            activeMinutes = 85
+        ),
+        DailyStats(
+            date = dateFormat.format(calendar.apply { add(Calendar.DAY_OF_YEAR, -1) }.time),
+            steps = 9890,
+            calories = 495,
+            distance = 7.3f,
+            activeMinutes = 52
+        )
+    )
+}
+
+@Composable
+fun HomeScreen(
+    userName: String = "User",
+    userEmail: String = "user@example.com",
+    onLogoutClick: () -> Unit
+) {
+    var selectedTab by remember { mutableStateOf(0) }
+    var selectedDate by remember { mutableStateOf(0) } // 0 = today, 1 = yesterday, etc.
+    val fitnessData = remember { getMockFitnessData() }
+
+    Box(
+        modifier = Modifier.fillMaxSize()
+    ) {
+        // Main content with light purple background
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color(0xFFB8A9FF))
+        ) {
+            when (selectedTab) {
+                0 -> {
+                    // Main Screen - Today's activity
+                    MainScreen(
+                        userName = userName,
+                        fitnessData = fitnessData
+                    )
+                }
+                1 -> {
+                    // Statistics Screen - Detailed analytics
+                    StatsScreen(
+                        fitnessData = fitnessData,
+                        selectedDate = selectedDate,
+                        onDateSelected = { selectedDate = it }
+                    )
+                }
+                2 -> {
+                    // Profile Screen
+                    ProfileScreen(
+                        userName = userName,
+                        userEmail = userEmail,
+                        onBackClick = { },
+                        onLogoutClick = onLogoutClick
+                    )
+                }
+            }
+        }
+
+        // Floating/Overlay Bottom Navigation
+        Card(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .wrapContentSize()
+                .padding(horizontal = 16.dp, vertical = 20.dp),
+            colors = CardDefaults.cardColors(containerColor = Color.White),
+            elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
+            shape = RoundedCornerShape(16.dp)
+        ) {
+            Row(
+                modifier = Modifier
+                    .wrapContentSize()
+                    .padding(horizontal = 16.dp, vertical = 6.dp),
+                horizontalArrangement = Arrangement.spacedBy(24.dp)
+            ) {
+                // Main Tab
+                FloatingNavItem(
+                    icon = Icons.Default.Home,
+                    title = "Main",
+                    isSelected = selectedTab == 0,
+                    onClick = { selectedTab = 0 }
+                )
+
+                // Stats Tab
+                FloatingNavItem(
+                    icon = Icons.Default.Analytics,
+                    title = "Stats",
+                    isSelected = selectedTab == 1,
+                    onClick = { selectedTab = 1 }
+                )
+
+                // Profile Tab
+                FloatingNavItem(
+                    icon = Icons.Default.Person,
+                    title = "Profile",
+                    isSelected = selectedTab == 2,
+                    onClick = { selectedTab = 2 }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun FloatingNavItem(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    title: String,
+    isSelected: Boolean,
+    onClick: () -> Unit
+) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier
+            .clickable { onClick() }
+            .padding(2.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .size(36.dp)
+                .background(
+                    if (isSelected) Color(0xFF667eea) else Color.Transparent,
+                    CircleShape
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = title,
+                tint = if (isSelected) Color.White else Color(0xFF718096),
+                modifier = Modifier.size(22.dp)
+            )
+        }
+
+        Spacer(modifier = Modifier.height(2.dp))
+
+        Text(
+            text = title,
+            fontSize = 11.sp,
+            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+            color = if (isSelected) Color(0xFF667eea) else Color(0xFF718096)
+        )
+    }
+}
