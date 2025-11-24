@@ -15,18 +15,25 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.fittrack.ui.theme.LocalThemeManager
+import com.example.fittrack.ui.theme.getAppColors
 
 @Composable
 fun ProfileScreen(
     userName: String = "User",
     userEmail: String = "user@example.com",
-    onBackClick: () -> Unit,
-    onLogoutClick: () -> Unit
+    onLogoutClick: () -> Unit,
+    onEditProfileClick: () -> Unit = {},
+    onAppSettingsClick: () -> Unit = {},
+    onAboutClick: () -> Unit = {}
 ) {
+    val themeManager = LocalThemeManager.current
+    val colors = getAppColors(themeManager.isDarkMode)
+
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFFB8A9FF)) // Changed to match HomeScreen background
+            .background(colors.background)
             .statusBarsPadding()
             .navigationBarsPadding()
             .padding(16.dp),
@@ -37,14 +44,14 @@ fun ProfileScreen(
             text = "Profile",
             fontSize = 24.sp,
             fontWeight = FontWeight.Bold,
-            color = Color(0xFF2D3748),
+            color = colors.textPrimary,
             modifier = Modifier.padding(vertical = 8.dp)
         )
 
         // Profile Avatar and Info
         Card(
             modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = Color.White),
+            colors = CardDefaults.cardColors(containerColor = colors.cardBackground),
             elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
         ) {
             Column(
@@ -57,7 +64,7 @@ fun ProfileScreen(
                 Box(
                     modifier = Modifier
                         .size(120.dp)
-                        .background(Color(0xFF667eea), CircleShape),
+                        .background(colors.primary, CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
@@ -74,13 +81,13 @@ fun ProfileScreen(
                     text = userName,
                     fontSize = 24.sp,
                     fontWeight = FontWeight.Bold,
-                    color = Color(0xFF2D3748)
+                    color = colors.textPrimary
                 )
 
                 Text(
                     text = userEmail,
                     fontSize = 16.sp,
-                    color = Color(0xFF718096)
+                    color = colors.textSecondary
                 )
             }
         }
@@ -88,7 +95,7 @@ fun ProfileScreen(
         // Profile Options
         Card(
             modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = Color.White),
+            colors = CardDefaults.cardColors(containerColor = colors.cardBackground),
             elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
         ) {
             Column(
@@ -98,26 +105,32 @@ fun ProfileScreen(
                     text = "Settings",
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
-                    color = Color(0xFF2D3748),
+                    color = colors.textPrimary,
                     modifier = Modifier.padding(bottom = 16.dp)
                 )
 
                 ProfileMenuItem(
                     icon = Icons.Default.Person,
                     title = "Edit Profile",
-                    subtitle = "Update your personal information"
+                    subtitle = "Update your personal information",
+                    onClick = onEditProfileClick,
+                    colors = colors
                 )
 
                 ProfileMenuItem(
                     icon = Icons.Default.Settings,
                     title = "App Settings",
-                    subtitle = "Customize your app experience"
+                    subtitle = "Customize your app experience",
+                    onClick = onAppSettingsClick,
+                    colors = colors
                 )
 
                 ProfileMenuItem(
                     icon = Icons.Default.Info,
                     title = "About",
-                    subtitle = "App version and information"
+                    subtitle = "App version and information",
+                    onClick = onAboutClick,
+                    colors = colors
                 )
 
                 Spacer(modifier = Modifier.height(16.dp))
@@ -129,7 +142,7 @@ fun ProfileScreen(
                         .fillMaxWidth()
                         .height(56.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFFE53E3E)
+                        containerColor = colors.error
                     ),
                     shape = RoundedCornerShape(12.dp)
                 ) {
@@ -154,51 +167,60 @@ fun ProfileScreen(
 fun ProfileMenuItem(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     title: String,
-    subtitle: String
+    subtitle: String,
+    onClick: () -> Unit = {},
+    colors: com.example.fittrack.ui.theme.AppColors
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically
+    Surface(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth(),
+        color = Color.Transparent
     ) {
-        Box(
+        Row(
             modifier = Modifier
-                .size(40.dp)
-                .background(Color(0xFF667eea).copy(alpha = 0.1f), CircleShape),
-            contentAlignment = Alignment.Center
+                .fillMaxWidth()
+                .padding(vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .background(colors.primary.copy(alpha = 0.1f), CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    icon,
+                    contentDescription = title,
+                    tint = colors.primary,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+
+            Spacer(modifier = Modifier.width(16.dp))
+
+            Column(
+                modifier = Modifier.weight(1f)
+            ) {
+                Text(
+                    text = title,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = colors.textPrimary
+                )
+                Text(
+                    text = subtitle,
+                    fontSize = 14.sp,
+                    color = colors.textSecondary
+                )
+            }
+
             Icon(
-                icon,
-                contentDescription = title,
-                tint = Color(0xFF667eea),
+                Icons.Default.ChevronRight,
+                contentDescription = "Navigate",
+                tint = colors.textSecondary,
                 modifier = Modifier.size(20.dp)
             )
         }
-
-        Spacer(modifier = Modifier.width(16.dp))
-
-        Column(
-            modifier = Modifier.weight(1f)
-        ) {
-            Text(
-                text = title,
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Medium,
-                color = Color(0xFF2D3748)
-            )
-            Text(
-                text = subtitle,
-                fontSize = 14.sp,
-                color = Color(0xFF718096)
-            )
-        }
-
-        Icon(
-            Icons.Default.ChevronRight,
-            contentDescription = "Navigate",
-            tint = Color(0xFF718096),
-            modifier = Modifier.size(20.dp)
-        )
     }
 }
+

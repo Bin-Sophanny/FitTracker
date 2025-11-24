@@ -6,6 +6,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import android.util.Patterns
 
 sealed class AuthState {
     object Idle : AuthState()
@@ -35,7 +36,45 @@ class AuthViewModel : ViewModel() {
         }
     }
 
+    private fun validateEmail(email: String): String? {
+        return when {
+            email.isBlank() -> "Email is required"
+            !Patterns.EMAIL_ADDRESS.matcher(email).matches() -> "Invalid email address format"
+            else -> null
+        }
+    }
+
+    private fun validatePassword(password: String): String? {
+        return when {
+            password.isBlank() -> "Password is required"
+            password.length < 6 -> "Password must be at least 6 characters"
+            else -> null
+        }
+    }
+
+    private fun validateName(name: String): String? {
+        return when {
+            name.isBlank() -> "Name is required"
+            name.length < 2 -> "Name must be at least 2 characters"
+            else -> null
+        }
+    }
+
     fun signIn(email: String, password: String) {
+        // Validate email
+        val emailError = validateEmail(email)
+        if (emailError != null) {
+            _authState.value = AuthState.Error("Email: $emailError")
+            return
+        }
+
+        // Validate password
+        val passwordError = validatePassword(password)
+        if (passwordError != null) {
+            _authState.value = AuthState.Error("Password: $passwordError")
+            return
+        }
+
         viewModelScope.launch {
             _authState.value = AuthState.Loading
             val result = authRepository.signIn(email, password)
@@ -54,6 +93,27 @@ class AuthViewModel : ViewModel() {
     }
 
     fun signUp(name: String, email: String, password: String) {
+        // Validate name
+        val nameError = validateName(name)
+        if (nameError != null) {
+            _authState.value = AuthState.Error("Name: $nameError")
+            return
+        }
+
+        // Validate email
+        val emailError = validateEmail(email)
+        if (emailError != null) {
+            _authState.value = AuthState.Error("Email: $emailError")
+            return
+        }
+
+        // Validate password
+        val passwordError = validatePassword(password)
+        if (passwordError != null) {
+            _authState.value = AuthState.Error("Password: $passwordError")
+            return
+        }
+
         viewModelScope.launch {
             _authState.value = AuthState.Loading
             val result = authRepository.signUp(name, email, password)
@@ -72,6 +132,13 @@ class AuthViewModel : ViewModel() {
     }
 
     fun sendPasswordResetEmail(email: String) {
+        // Validate email
+        val emailError = validateEmail(email)
+        if (emailError != null) {
+            _authState.value = AuthState.Error("Email: $emailError")
+            return
+        }
+
         viewModelScope.launch {
             _authState.value = AuthState.Loading
             val result = authRepository.sendPasswordResetEmail(email)

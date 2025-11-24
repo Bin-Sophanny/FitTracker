@@ -15,6 +15,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.fittrack.ui.theme.LocalThemeManager
+import com.example.fittrack.ui.theme.ThemeManager
+import com.example.fittrack.ui.theme.getAppColors
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -71,49 +74,83 @@ fun getMockFitnessData(): List<DailyStats> {
     )
 }
 
+enum class ProfileScreen {
+    MAIN,
+    EDIT_PROFILE,
+    APP_SETTINGS,
+    ABOUT
+}
+
 @Composable
 fun HomeScreen(
     userName: String = "User",
     userEmail: String = "user@example.com",
     onLogoutClick: () -> Unit
 ) {
+    val themeManager = remember { ThemeManager() }
+    val colors = getAppColors(themeManager.isDarkMode)
+
     var selectedTab by remember { mutableStateOf(0) }
-    var selectedDate by remember { mutableStateOf(0) } // 0 = today, 1 = yesterday, etc.
+    var selectedDate by remember { mutableStateOf(0) }
+    var profileScreenState by remember { mutableStateOf(ProfileScreen.MAIN) }
     val fitnessData = remember { getMockFitnessData() }
 
-    Box(
-        modifier = Modifier.fillMaxSize()
-    ) {
-        // Main content with light purple background
+    CompositionLocalProvider(LocalThemeManager provides themeManager) {
         Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(Color(0xFFB8A9FF))
+            modifier = Modifier.fillMaxSize()
         ) {
-            when (selectedTab) {
-                0 -> {
-                    // Main Screen - Today's activity
-                    MainScreen(
-                        userName = userName,
-                        fitnessData = fitnessData
-                    )
-                }
-                1 -> {
-                    // Statistics Screen - Detailed analytics
-                    StatsScreen(
-                        fitnessData = fitnessData,
-                        selectedDate = selectedDate,
-                        onDateSelected = { selectedDate = it }
-                    )
-                }
-                2 -> {
-                    // Profile Screen
-                    ProfileScreen(
-                        userName = userName,
-                        userEmail = userEmail,
-                        onBackClick = { },
-                        onLogoutClick = onLogoutClick
-                    )
+            // Main content with dynamic background color
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(colors.background)
+            ) {
+                when (selectedTab) {
+                    0 -> {
+                        // Main Screen - Today's activity
+                        MainScreen(
+                            userName = userName,
+                            fitnessData = fitnessData
+                        )
+                    }
+                    1 -> {
+                        // Statistics Screen - Detailed analytics
+                        StatsScreen(
+                            fitnessData = fitnessData,
+                            selectedDate = selectedDate,
+                            onDateSelected = { selectedDate = it }
+                        )
+                    }
+                    2 -> {
+                        // Profile Section with nested screens
+                    when (profileScreenState) {
+                        ProfileScreen.MAIN -> {
+                            ProfileScreen(
+                                userName = userName,
+                                userEmail = userEmail,
+                                onLogoutClick = onLogoutClick,
+                                onEditProfileClick = { profileScreenState = ProfileScreen.EDIT_PROFILE },
+                                onAppSettingsClick = { profileScreenState = ProfileScreen.APP_SETTINGS },
+                                onAboutClick = { profileScreenState = ProfileScreen.ABOUT }
+                            )
+                        }
+                        ProfileScreen.EDIT_PROFILE -> {
+                            EditProfileScreen(
+                                authViewModel = androidx.lifecycle.viewmodel.compose.viewModel(),
+                                onBackClick = { profileScreenState = ProfileScreen.MAIN }
+                            )
+                        }
+                        ProfileScreen.APP_SETTINGS -> {
+                            AppSettingsScreen(
+                                onBackClick = { profileScreenState = ProfileScreen.MAIN }
+                            )
+                        }
+                        ProfileScreen.ABOUT -> {
+                            AboutScreen(
+                                onBackClick = { profileScreenState = ProfileScreen.MAIN }
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -124,7 +161,7 @@ fun HomeScreen(
                 .align(Alignment.BottomCenter)
                 .wrapContentSize()
                 .padding(horizontal = 16.dp, vertical = 20.dp),
-            colors = CardDefaults.cardColors(containerColor = Color.White),
+            colors = CardDefaults.cardColors(containerColor = colors.cardBackground),
             elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
             shape = RoundedCornerShape(16.dp)
         ) {
@@ -139,7 +176,8 @@ fun HomeScreen(
                     icon = Icons.Default.Home,
                     title = "Main",
                     isSelected = selectedTab == 0,
-                    onClick = { selectedTab = 0 }
+                    onClick = { selectedTab = 0 },
+                    colors = colors
                 )
 
                 // Stats Tab
@@ -147,7 +185,8 @@ fun HomeScreen(
                     icon = Icons.Default.Analytics,
                     title = "Stats",
                     isSelected = selectedTab == 1,
-                    onClick = { selectedTab = 1 }
+                    onClick = { selectedTab = 1 },
+                    colors = colors
                 )
 
                 // Profile Tab
@@ -155,10 +194,12 @@ fun HomeScreen(
                     icon = Icons.Default.Person,
                     title = "Profile",
                     isSelected = selectedTab == 2,
-                    onClick = { selectedTab = 2 }
+                    onClick = { selectedTab = 2 },
+                    colors = colors
                 )
             }
         }
+    }
     }
 }
 
@@ -167,7 +208,8 @@ fun FloatingNavItem(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     title: String,
     isSelected: Boolean,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    colors: com.example.fittrack.ui.theme.AppColors
 ) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -179,7 +221,7 @@ fun FloatingNavItem(
             modifier = Modifier
                 .size(36.dp)
                 .background(
-                    if (isSelected) Color(0xFF667eea) else Color.Transparent,
+                    if (isSelected) colors.primary else Color.Transparent,
                     CircleShape
                 ),
             contentAlignment = Alignment.Center
@@ -187,7 +229,7 @@ fun FloatingNavItem(
             Icon(
                 imageVector = icon,
                 contentDescription = title,
-                tint = if (isSelected) Color.White else Color(0xFF718096),
+                tint = if (isSelected) Color.White else colors.textSecondary,
                 modifier = Modifier.size(22.dp)
             )
         }
@@ -198,7 +240,7 @@ fun FloatingNavItem(
             text = title,
             fontSize = 11.sp,
             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-            color = if (isSelected) Color(0xFF667eea) else Color(0xFF718096)
+            color = if (isSelected) colors.primary else colors.textSecondary
         )
     }
 }

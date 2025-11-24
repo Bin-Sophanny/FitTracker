@@ -275,11 +275,7 @@ fun SignUpScreen(
                     Button(
                         onClick = {
                             errorMessage = null
-                            if (password.length < 6) {
-                                errorMessage = "Password must be at least 6 characters"
-                            } else {
-                                authViewModel.signUp(name, email, password)
-                            }
+                            authViewModel.signUp(name, email, password)
                         },
                         modifier = Modifier
                             .fillMaxWidth()

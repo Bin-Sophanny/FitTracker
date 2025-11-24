@@ -8,6 +8,7 @@ import com.example.fittrack.auth.AuthViewModel
 import com.example.fittrack.ui.screens.*
 
 enum class Screen {
+    SPLASH,
     SIGN_IN,
     SIGN_UP,
     FORGOT_PASSWORD,
@@ -22,7 +23,7 @@ fun FitTrackNavigation(
     val authState by authViewModel.authState.collectAsState()
     val isAuthenticated by authViewModel.isAuthenticated.collectAsState()
 
-    var currentScreen by remember { mutableStateOf(Screen.SIGN_IN) }
+    var currentScreen by remember { mutableStateOf(Screen.SPLASH) }
     var userName by remember { mutableStateOf("") }
     var userEmail by remember { mutableStateOf("") }
 
@@ -37,6 +38,15 @@ fun FitTrackNavigation(
     }
 
     when (currentScreen) {
+        Screen.SPLASH -> {
+            SplashScreen(
+                onSplashFinished = {
+                    // After splash, check if user is authenticated
+                    currentScreen = if (isAuthenticated) Screen.HOME else Screen.SIGN_IN
+                }
+            )
+        }
+
         Screen.SIGN_IN -> {
             SignInScreen(
                 authViewModel = authViewModel,

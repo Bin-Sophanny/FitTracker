@@ -19,7 +19,8 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import java.text.DecimalFormat
+import com.example.fittrack.ui.theme.LocalThemeManager
+import com.example.fittrack.ui.theme.getAppColors
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -29,6 +30,8 @@ fun StatsScreen(
     selectedDate: Int,
     onDateSelected: (Int) -> Unit
 ) {
+    val themeManager = LocalThemeManager.current
+    val colors = getAppColors(themeManager.isDarkMode)
     val currentStats = fitnessData[selectedDate]
 
     LazyColumn(
@@ -45,16 +48,16 @@ fun StatsScreen(
                 text = "Statistics",
                 fontSize = 28.sp,
                 fontWeight = FontWeight.Bold,
-                color = Color(0xFF2D3748),
+                color = colors.textPrimary,
                 modifier = Modifier.padding(bottom = 8.dp)
             )
         }
 
-        // Date Navigation Row
+        // Date Selection Card
         item {
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = Color.White),
+                colors = CardDefaults.cardColors(containerColor = colors.cardBackground),
                 elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
             ) {
                 Column(
@@ -64,7 +67,7 @@ fun StatsScreen(
                         text = "Select Date",
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Medium,
-                        color = Color(0xFF2D3748),
+                        color = colors.textPrimary,
                         modifier = Modifier.padding(bottom = 12.dp)
                     )
 
@@ -76,7 +79,8 @@ fun StatsScreen(
                                 date = fitnessData[index].date,
                                 isSelected = selectedDate == index,
                                 isToday = index == 0,
-                                onClick = { onDateSelected(index) }
+                                onClick = { onDateSelected(index) },
+                                appColors = colors
                             )
                         }
                     }
@@ -91,16 +95,17 @@ fun StatsScreen(
                 modifier = Modifier.fillMaxWidth(),
                 icon = Icons.AutoMirrored.Filled.DirectionsWalk,
                 title = "Steps",
-                value = DecimalFormat("#,###").format(currentStats.steps),
+                value = "${currentStats.steps}",
                 subtitle = "Goal: 10,000",
                 progress = currentStats.steps / 10000f,
-                color = Color(0xFF667eea),
-                showProgress = true
+                color = colors.primary,
+                showProgress = true,
+                appColors = colors
             )
         }
 
         item {
-            // Calories and Distance Cards (side by side, full width combined)
+            // Calories and Distance Cards (side by side)
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -114,7 +119,8 @@ fun StatsScreen(
                     subtitle = "kcal burned",
                     progress = currentStats.calories / 600f,
                     color = Color(0xFFE53E3E),
-                    showProgress = false
+                    showProgress = false,
+                    appColors = colors
                 )
 
                 // Distance Card
@@ -126,16 +132,17 @@ fun StatsScreen(
                     subtitle = "Total walked",
                     progress = currentStats.distance / 12f,
                     color = Color(0xFF38A169),
-                    showProgress = false
+                    showProgress = false,
+                    appColors = colors
                 )
             }
         }
 
-        // Weekly Progress Overview
+        // Weekly Overview Card
         item {
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = Color.White),
+                colors = CardDefaults.cardColors(containerColor = colors.cardBackground),
                 elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
             ) {
                 Column(
@@ -145,7 +152,7 @@ fun StatsScreen(
                         text = "Weekly Overview",
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold,
-                        color = Color(0xFF2D3748),
+                        color = colors.textPrimary,
                         modifier = Modifier.fillMaxWidth()
                     )
 
@@ -156,9 +163,9 @@ fun StatsScreen(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceEvenly
                     ) {
-                        WeeklyStatItem("Steps", "68.2K")
-                        WeeklyStatItem("Calories", "3.1K")
-                        WeeklyStatItem("Distance", "47.8 km")
+                        WeeklyStatItem("Steps", "68.2K", colors)
+                        WeeklyStatItem("Calories", "3.1K", colors)
+                        WeeklyStatItem("Distance", "47.8 km", colors)
                     }
                 }
             }
@@ -171,7 +178,8 @@ fun DateCard(
     date: String,
     isSelected: Boolean,
     isToday: Boolean,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    appColors: com.example.fittrack.ui.theme.AppColors
 ) {
     val displayText = when {
         isToday -> "Today"
@@ -188,16 +196,17 @@ fun DateCard(
             .clickable { onClick() }
             .padding(2.dp),
         colors = CardDefaults.cardColors(
-            containerColor = if (isSelected) Color(0xFF667eea) else Color(0xFFF7FAFC)
+            containerColor = if (isSelected) appColors.primary else appColors.cardBackground
         ),
         elevation = CardDefaults.cardElevation(
-            defaultElevation = if (isSelected) 8.dp else 2.dp
-        )
+            defaultElevation = if (isSelected) 6.dp else 2.dp
+        ),
+        shape = RoundedCornerShape(12.dp)
     ) {
         Text(
             text = displayText,
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-            color = if (isSelected) Color.White else Color(0xFF4A5568),
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
+            color = if (isSelected) Color.White else appColors.textPrimary,
             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
             fontSize = 14.sp
         )
@@ -213,23 +222,24 @@ fun StatCard(
     subtitle: String,
     progress: Float,
     color: Color,
-    showProgress: Boolean = true // Add parameter to control progress bar visibility
+    showProgress: Boolean = true,
+    appColors: com.example.fittrack.ui.theme.AppColors
 ) {
     Card(
         modifier = modifier,
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = appColors.cardBackground),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(20.dp), // Increased padding for better spacing
+                .padding(20.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
             Box(
                 modifier = Modifier
-                    .size(56.dp) // Increased size for better visibility
+                    .size(56.dp)
                     .background(color.copy(alpha = 0.1f), CircleShape),
                 contentAlignment = Alignment.Center
             ) {
@@ -237,7 +247,7 @@ fun StatCard(
                     icon,
                     contentDescription = title,
                     tint = color,
-                    modifier = Modifier.size(28.dp) // Increased icon size
+                    modifier = Modifier.size(28.dp)
                 )
             }
 
@@ -245,24 +255,24 @@ fun StatCard(
 
             Text(
                 text = value,
-                fontSize = 24.sp, // Increased font size
+                fontSize = 24.sp,
                 fontWeight = FontWeight.Bold,
-                color = Color(0xFF2D3748)
+                color = appColors.textPrimary
             )
 
             Spacer(modifier = Modifier.height(4.dp))
 
             Text(
                 text = title,
-                fontSize = 14.sp, // Increased font size
-                color = Color(0xFF718096),
+                fontSize = 14.sp,
+                color = appColors.textSecondary,
                 fontWeight = FontWeight.Medium
             )
 
             Text(
                 text = subtitle,
-                fontSize = 12.sp, // Increased font size
-                color = Color(0xFF718096)
+                fontSize = 12.sp,
+                color = appColors.textSecondary
             )
 
             // Only show progress bar if showProgress is true
@@ -273,7 +283,7 @@ fun StatCard(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(6.dp) // Increased height for better visibility
+                        .height(6.dp)
                         .background(color.copy(alpha = 0.2f), RoundedCornerShape(3.dp))
                 ) {
                     Box(
@@ -291,7 +301,8 @@ fun StatCard(
 @Composable
 fun WeeklyStatItem(
     title: String,
-    value: String
+    value: String,
+    colors: com.example.fittrack.ui.theme.AppColors
 ) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally
@@ -300,12 +311,12 @@ fun WeeklyStatItem(
             text = value,
             fontSize = 16.sp,
             fontWeight = FontWeight.Bold,
-            color = Color(0xFF2D3748)
+            color = colors.textPrimary
         )
         Text(
             text = title,
             fontSize = 12.sp,
-            color = Color(0xFF718096)
+            color = colors.textSecondary
         )
     }
 }

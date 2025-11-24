@@ -17,13 +17,17 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import java.text.DecimalFormat
+import com.example.fittrack.ui.theme.LocalThemeManager
+import com.example.fittrack.ui.theme.getAppColors
 
 @Composable
 fun MainScreen(
     userName: String = "User",
     fitnessData: List<DailyStats>
 ) {
+    val themeManager = LocalThemeManager.current
+    val colors = getAppColors(themeManager.isDarkMode)
+
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
@@ -44,21 +48,20 @@ fun MainScreen(
                         text = "Hello, $userName! 👋",
                         fontSize = 28.sp,
                         fontWeight = FontWeight.Bold,
-                        color = Color(0xFF2D3748)
+                        color = colors.textPrimary
                     )
                     Text(
                         text = "Today's Activity",
                         fontSize = 16.sp,
-                        color = Color(0xFF718096),
+                        color = colors.textSecondary,
                         fontWeight = FontWeight.Medium
                     )
                 }
 
-                // Profile Avatar
                 Box(
                     modifier = Modifier
                         .size(48.dp)
-                        .background(Color(0xFF667eea), CircleShape),
+                        .background(colors.primary, CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
@@ -78,11 +81,12 @@ fun MainScreen(
                 modifier = Modifier.fillMaxWidth(),
                 icon = Icons.AutoMirrored.Filled.DirectionsWalk,
                 title = "Steps",
-                value = DecimalFormat("#,###").format(fitnessData[0].steps),
+                value = "${fitnessData[0].steps}",
                 subtitle = "Goal: 10,000",
                 progress = fitnessData[0].steps / 10000f,
-                color = Color(0xFF667eea),
-                showProgress = true
+                color = colors.primary,
+                showProgress = true,
+                appColors = colors
             )
         }
 
@@ -101,7 +105,8 @@ fun MainScreen(
                     subtitle = "kcal burned",
                     progress = fitnessData[0].calories / 600f,
                     color = Color(0xFFE53E3E),
-                    showProgress = false
+                    showProgress = false,
+                    appColors = colors
                 )
 
                 // Distance Card
@@ -113,7 +118,8 @@ fun MainScreen(
                     subtitle = "Total walked",
                     progress = fitnessData[0].distance / 12f,
                     color = Color(0xFF38A169),
-                    showProgress = false
+                    showProgress = false,
+                    appColors = colors
                 )
             }
         }
@@ -129,23 +135,24 @@ fun MainStatCard(
     subtitle: String,
     progress: Float,
     color: Color,
-    showProgress: Boolean = true // Add parameter to control progress bar visibility
+    showProgress: Boolean = true,
+    appColors: com.example.fittrack.ui.theme.AppColors
 ) {
     Card(
         modifier = modifier,
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(defaultElevation = if (showProgress) 6.dp else 4.dp) // Increased elevation for steps
+        colors = CardDefaults.cardColors(containerColor = appColors.cardBackground),
+        elevation = CardDefaults.cardElevation(defaultElevation = if (showProgress) 6.dp else 4.dp)
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(if (showProgress) 32.dp else 20.dp), // Much larger padding for steps card
+                .padding(if (showProgress) 32.dp else 20.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
             Box(
                 modifier = Modifier
-                    .size(if (showProgress) 80.dp else 56.dp) // Much bigger icon container for steps
+                    .size(if (showProgress) 80.dp else 56.dp)
                     .background(color.copy(alpha = 0.1f), CircleShape),
                 contentAlignment = Alignment.Center
             ) {
@@ -153,43 +160,43 @@ fun MainStatCard(
                     icon,
                     contentDescription = title,
                     tint = color,
-                    modifier = Modifier.size(if (showProgress) 40.dp else 28.dp) // Much bigger icon for steps
+                    modifier = Modifier.size(if (showProgress) 40.dp else 28.dp)
                 )
             }
 
-            Spacer(modifier = Modifier.height(if (showProgress) 24.dp else 16.dp)) // More space for steps
+            Spacer(modifier = Modifier.height(if (showProgress) 24.dp else 16.dp))
 
             Text(
                 text = value,
-                fontSize = if (showProgress) 36.sp else 24.sp, // Much larger font for steps value
+                fontSize = if (showProgress) 36.sp else 24.sp,
                 fontWeight = FontWeight.Bold,
-                color = Color(0xFF2D3748)
+                color = appColors.textPrimary
             )
 
             Spacer(modifier = Modifier.height(if (showProgress) 8.dp else 4.dp))
 
             Text(
                 text = title,
-                fontSize = if (showProgress) 18.sp else 14.sp, // Larger title for steps
-                color = Color(0xFF718096),
+                fontSize = if (showProgress) 18.sp else 14.sp,
+                color = appColors.textSecondary,
                 fontWeight = FontWeight.Medium
             )
 
             Text(
                 text = subtitle,
-                fontSize = if (showProgress) 14.sp else 12.sp, // Larger subtitle for steps
-                color = Color(0xFF718096)
+                fontSize = if (showProgress) 14.sp else 12.sp,
+                color = appColors.textSecondary
             )
 
             // Only show progress bar if showProgress is true
             if (showProgress) {
-                Spacer(modifier = Modifier.height(20.dp)) // More space before progress
+                Spacer(modifier = Modifier.height(20.dp))
 
-                // Bigger progress bar for steps
+                // Progress bar
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(8.dp) // Thicker progress bar
+                        .height(8.dp)
                         .background(color.copy(alpha = 0.2f), RoundedCornerShape(4.dp))
                 ) {
                     Box(
@@ -206,7 +213,7 @@ fun MainStatCard(
                 Text(
                     text = "${(progress * 100).toInt()}% of goal completed",
                     fontSize = 14.sp,
-                    color = Color(0xFF718096),
+                    color = appColors.textSecondary,
                     fontWeight = FontWeight.Medium
                 )
             }
