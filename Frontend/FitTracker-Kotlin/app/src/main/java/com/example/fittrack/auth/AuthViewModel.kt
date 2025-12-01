@@ -7,6 +7,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import android.util.Patterns
+import com.example.fittrack.data.repository.FitTrackRepository
+import android.util.Log
 
 sealed class AuthState {
     object Idle : AuthState()
@@ -17,6 +19,7 @@ sealed class AuthState {
 
 class AuthViewModel : ViewModel() {
     private val authRepository = AuthRepository()
+    private val backendRepository = FitTrackRepository()
 
     private val _authState = MutableStateFlow<AuthState>(AuthState.Idle)
     val authState: StateFlow<AuthState> = _authState.asStateFlow()
@@ -80,12 +83,29 @@ class AuthViewModel : ViewModel() {
             val result = authRepository.signIn(email, password)
             result.fold(
                 onSuccess = { user ->
-                    _authState.value = AuthState.Success(user)
-                    _isAuthenticated.value = true
+                    // Firebase sign-in successful, now register/login to backend
+                    try {
+                        val backendResponse = backendRepository.loginUser(user.email ?: email)
+                        if (backendResponse.isSuccessful) {
+                            Log.d("AuthViewModel", "Backend login successful")
+                            _authState.value = AuthState.Success(user)
+                            _isAuthenticated.value = true
+                        } else {
+                            Log.e("AuthViewModel", "Backend login failed: ${backendResponse.code()}")
+                            // Still allow user to proceed if backend fails
+                            _authState.value = AuthState.Success(user)
+                            _isAuthenticated.value = true
+                        }
+                    } catch (e: Exception) {
+                        Log.e("AuthViewModel", "Backend login error: ${e.message}")
+                        // Still allow user to proceed if backend fails
+                        _authState.value = AuthState.Success(user)
+                        _isAuthenticated.value = true
+                    }
                 },
                 onFailure = { exception ->
                     _authState.value = AuthState.Error(
-                        exception.message ?: "Authentication failed"
+                        exception.message ?: "Sign in failed"
                     )
                 }
             )
@@ -119,8 +139,28 @@ class AuthViewModel : ViewModel() {
             val result = authRepository.signUp(name, email, password)
             result.fold(
                 onSuccess = { user ->
-                    _authState.value = AuthState.Success(user)
-                    _isAuthenticated.value = true
+                    // Firebase sign-up successful, now register to backend
+                    try {
+                        val backendResponse = backendRepository.registerUser(
+                            displayName = name,
+                            email = user.email ?: email
+                        )
+                        if (backendResponse.isSuccessful) {
+                            Log.d("AuthViewModel", "Backend registration successful")
+                            _authState.value = AuthState.Success(user)
+                            _isAuthenticated.value = true
+                        } else {
+                            Log.e("AuthViewModel", "Backend registration failed: ${backendResponse.code()}")
+                            // Still allow user to proceed if backend fails
+                            _authState.value = AuthState.Success(user)
+                            _isAuthenticated.value = true
+                        }
+                    } catch (e: Exception) {
+                        Log.e("AuthViewModel", "Backend registration error: ${e.message}")
+                        // Still allow user to proceed if backend fails
+                        _authState.value = AuthState.Success(user)
+                        _isAuthenticated.value = true
+                    }
                 },
                 onFailure = { exception ->
                     _authState.value = AuthState.Error(
@@ -144,7 +184,7 @@ class AuthViewModel : ViewModel() {
             val result = authRepository.sendPasswordResetEmail(email)
             result.fold(
                 onSuccess = {
-                    _authState.value = AuthState.Idle
+                    _authState.value = AuthState.Success(authRepository.currentUser!!)
                 },
                 onFailure = { exception ->
                     _authState.value = AuthState.Error(

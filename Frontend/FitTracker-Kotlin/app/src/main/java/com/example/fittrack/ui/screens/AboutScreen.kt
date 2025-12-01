@@ -36,7 +36,7 @@ fun AboutScreen(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
+                .padding(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             IconButton(onClick = onBackClick) {
@@ -48,10 +48,10 @@ fun AboutScreen(
             }
             Text(
                 text = "About",
-                fontSize = 24.sp,
+                fontSize = 20.sp,
                 fontWeight = FontWeight.Bold,
                 color = colors.textPrimary,
-                modifier = Modifier.padding(start = 8.dp)
+                modifier = Modifier.padding(start = 6.dp)
             )
         }
 
@@ -59,9 +59,9 @@ fun AboutScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp)
-                .padding(bottom = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+                .padding(horizontal = 12.dp)
+                .padding(bottom = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             // App Icon and Name
             Card(
@@ -72,19 +72,19 @@ fun AboutScreen(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(32.dp),
+                        .padding(20.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Icon(
                         Icons.Default.FitnessCenter,
                         contentDescription = "FitTracker Logo",
                         tint = colors.primary,
-                        modifier = Modifier.size(80.dp)
+                        modifier = Modifier.size(60.dp)
                     )
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(12.dp))
                     Text(
                         text = "FitTracker",
-                        fontSize = 28.sp,
+                        fontSize = 22.sp,
                         fontWeight = FontWeight.Bold,
                         color = colors.textPrimary
                     )
@@ -98,20 +98,20 @@ fun AboutScreen(
                 elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
             ) {
                 Column(
-                    modifier = Modifier.padding(24.dp)
+                    modifier = Modifier.padding(16.dp)
                 ) {
                     Text(
                         text = "About FitTracker",
-                        fontSize = 18.sp,
+                        fontSize = 16.sp,
                         fontWeight = FontWeight.Bold,
                         color = colors.textPrimary,
-                        modifier = Modifier.padding(bottom = 12.dp)
+                        modifier = Modifier.padding(bottom = 10.dp)
                     )
                     Text(
                         text = "FitTracker is your personal fitness companion designed to help you achieve your health and fitness goals. Track your daily activities, monitor your progress, and stay motivated on your fitness journey.",
-                        fontSize = 15.sp,
+                        fontSize = 13.sp,
                         color = colors.textSecondary,
-                        lineHeight = 22.sp,
+                        lineHeight = 19.sp,
                         textAlign = TextAlign.Justify
                     )
                 }

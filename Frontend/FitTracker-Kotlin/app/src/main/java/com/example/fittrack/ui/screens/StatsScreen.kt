@@ -21,6 +21,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.fittrack.ui.theme.LocalThemeManager
 import com.example.fittrack.ui.theme.getAppColors
+import com.example.fittrack.data.model.DailyStats
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -61,18 +62,18 @@ fun StatsScreen(
                 elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
             ) {
                 Column(
-                    modifier = Modifier.padding(16.dp)
+                    modifier = Modifier.padding(12.dp)
                 ) {
                     Text(
                         text = "Select Date",
-                        fontSize = 16.sp,
+                        fontSize = 14.sp,
                         fontWeight = FontWeight.Medium,
                         color = colors.textPrimary,
-                        modifier = Modifier.padding(bottom = 12.dp)
+                        modifier = Modifier.padding(bottom = 10.dp)
                     )
 
                     LazyRow(
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
                         items(fitnessData.size) { index ->
                             DateCard(
@@ -96,10 +97,10 @@ fun StatsScreen(
                 icon = Icons.AutoMirrored.Filled.DirectionsWalk,
                 title = "Steps",
                 value = "${currentStats.steps}",
-                subtitle = "Goal: 10,000",
+                subtitle = "Total steps",
                 progress = currentStats.steps / 10000f,
                 color = colors.primary,
-                showProgress = true,
+                showProgress = false,
                 appColors = colors
             )
         }
@@ -137,39 +138,6 @@ fun StatsScreen(
                 )
             }
         }
-
-        // Weekly Overview Card
-        item {
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = colors.cardBackground),
-                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
-            ) {
-                Column(
-                    modifier = Modifier.padding(16.dp)
-                ) {
-                    Text(
-                        text = "Weekly Overview",
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = colors.textPrimary,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    // Mini weekly stats
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceEvenly
-                    ) {
-                        WeeklyStatItem("Steps", "68.2K", colors)
-                        WeeklyStatItem("Calories", "3.1K", colors)
-                        WeeklyStatItem("Distance", "47.8 km", colors)
-                    }
-                }
-            }
-        }
     }
 }
 
@@ -201,14 +169,14 @@ fun DateCard(
         elevation = CardDefaults.cardElevation(
             defaultElevation = if (isSelected) 6.dp else 2.dp
         ),
-        shape = RoundedCornerShape(12.dp)
+        shape = RoundedCornerShape(10.dp)
     ) {
         Text(
             text = displayText,
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
             color = if (isSelected) Color.White else appColors.textPrimary,
             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-            fontSize = 14.sp
+            fontSize = 12.sp
         )
     }
 }
@@ -233,13 +201,13 @@ fun StatCard(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(20.dp),
+                .padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
             Box(
                 modifier = Modifier
-                    .size(56.dp)
+                    .size(48.dp)
                     .background(color.copy(alpha = 0.1f), CircleShape),
                 contentAlignment = Alignment.Center
             ) {
@@ -247,15 +215,15 @@ fun StatCard(
                     icon,
                     contentDescription = title,
                     tint = color,
-                    modifier = Modifier.size(28.dp)
+                    modifier = Modifier.size(24.dp)
                 )
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
             Text(
                 text = value,
-                fontSize = 24.sp,
+                fontSize = 20.sp,
                 fontWeight = FontWeight.Bold,
                 color = appColors.textPrimary
             )
@@ -264,33 +232,33 @@ fun StatCard(
 
             Text(
                 text = title,
-                fontSize = 14.sp,
+                fontSize = 13.sp,
                 color = appColors.textSecondary,
                 fontWeight = FontWeight.Medium
             )
 
             Text(
                 text = subtitle,
-                fontSize = 12.sp,
+                fontSize = 11.sp,
                 color = appColors.textSecondary
             )
 
             // Only show progress bar if showProgress is true
             if (showProgress) {
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(10.dp))
 
                 // Progress bar
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(6.dp)
-                        .background(color.copy(alpha = 0.2f), RoundedCornerShape(3.dp))
+                        .height(5.dp)
+                        .background(color.copy(alpha = 0.2f), RoundedCornerShape(2.5.dp))
                 ) {
                     Box(
                         modifier = Modifier
                             .fillMaxWidth(progress.coerceIn(0f, 1f))
-                            .height(6.dp)
-                            .background(color, RoundedCornerShape(3.dp))
+                            .height(5.dp)
+                            .background(color, RoundedCornerShape(2.5.dp))
                     )
                 }
             }
@@ -309,13 +277,13 @@ fun WeeklyStatItem(
     ) {
         Text(
             text = value,
-            fontSize = 16.sp,
+            fontSize = 14.sp,
             fontWeight = FontWeight.Bold,
             color = colors.textPrimary
         )
         Text(
             text = title,
-            fontSize = 12.sp,
+            fontSize = 11.sp,
             color = colors.textSecondary
         )
     }

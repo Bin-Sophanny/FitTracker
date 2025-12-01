@@ -11,6 +11,7 @@ import androidx.compose.ui.Modifier
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import com.example.fittrack.navigation.FitTrackNavigation
 import com.example.fittrack.ui.theme.FitTrackTheme
+import com.example.fittrack.util.PermissionHelper
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -18,6 +19,18 @@ class MainActivity : ComponentActivity() {
         installSplashScreen()
 
         super.onCreate(savedInstanceState)
+
+        // Request step counting permission (Android 10+)
+        if (!PermissionHelper.hasActivityRecognitionPermission(this)) {
+            PermissionHelper.requestActivityRecognitionPermission(this) { granted ->
+                if (granted) {
+                    android.util.Log.d("MainActivity", "Activity recognition permission granted")
+                } else {
+                    android.util.Log.w("MainActivity", "Activity recognition permission denied - step counting may not work")
+                }
+            }
+        }
+
         enableEdgeToEdge()
         setContent {
             FitTrackTheme {

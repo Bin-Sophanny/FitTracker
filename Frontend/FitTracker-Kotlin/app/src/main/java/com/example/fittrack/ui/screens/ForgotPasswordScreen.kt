@@ -57,8 +57,8 @@ fun ForgotPasswordScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = 24.dp)
-                .padding(top = 16.dp, bottom = 16.dp)
+                .padding(horizontal = 16.dp)
+                .padding(top = 8.dp, bottom = 8.dp)
                 .imePadding(),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
@@ -69,38 +69,38 @@ fun ForgotPasswordScreen(
                 contentDescription = "FitTracker App Icon",
                 tint = Color.White,
                 modifier = Modifier
-                    .size(80.dp)
-                    .padding(bottom = 16.dp)
+                    .size(60.dp)
+                    .padding(bottom = 8.dp)
             )
 
             // App Title
             Text(
                 text = "FitTracker",
-                fontSize = 42.sp,
+                fontSize = 32.sp,
                 fontWeight = FontWeight.Bold,
                 color = Color.White,
-                modifier = Modifier.padding(bottom = 16.dp)
+                modifier = Modifier.padding(bottom = 8.dp)
             )
 
             Text(
                 text = "Reset Your Password",
-                fontSize = 16.sp,
+                fontSize = 14.sp,
                 color = Color.White.copy(alpha = 0.8f),
-                modifier = Modifier.padding(bottom = 48.dp)
+                modifier = Modifier.padding(bottom = 24.dp)
             )
 
             // Reset Password Card
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(20.dp)),
+                    .clip(RoundedCornerShape(16.dp)),
                 colors = CardDefaults.cardColors(
                     containerColor = Color.White.copy(alpha = 0.95f)
                 ),
                 elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
             ) {
                 Column(
-                    modifier = Modifier.padding(32.dp),
+                    modifier = Modifier.padding(20.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     if (!isEmailSent) {
@@ -110,25 +110,25 @@ fun ForgotPasswordScreen(
                             contentDescription = "Email Reset",
                             tint = Color(0xFF667eea),
                             modifier = Modifier
-                                .size(64.dp)
-                                .padding(bottom = 24.dp)
+                                .size(48.dp)
+                                .padding(bottom = 16.dp)
                         )
 
                         Text(
                             text = "Forgot Password?",
-                            fontSize = 28.sp,
+                            fontSize = 22.sp,
                             fontWeight = FontWeight.Bold,
                             color = Color(0xFF2D3748),
-                            modifier = Modifier.padding(bottom = 16.dp)
+                            modifier = Modifier.padding(bottom = 12.dp)
                         )
 
                         Text(
                             text = "Don't worry! Enter your email address below and we'll send you a link to reset your password.",
-                            fontSize = 16.sp,
+                            fontSize = 13.sp,
                             textAlign = TextAlign.Center,
                             color = Color(0xFF718096),
-                            modifier = Modifier.padding(bottom = 16.dp),
-                            lineHeight = 24.sp
+                            modifier = Modifier.padding(bottom = 12.dp),
+                            lineHeight = 19.sp
                         )
 
                         // Error message

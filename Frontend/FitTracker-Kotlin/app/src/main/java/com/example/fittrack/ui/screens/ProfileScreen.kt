@@ -36,16 +36,16 @@ fun ProfileScreen(
             .background(colors.background)
             .statusBarsPadding()
             .navigationBarsPadding()
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(20.dp)
+            .padding(12.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         // Header without back button - just title
         Text(
             text = "Profile",
-            fontSize = 24.sp,
+            fontSize = 20.sp,
             fontWeight = FontWeight.Bold,
             color = colors.textPrimary,
-            modifier = Modifier.padding(vertical = 8.dp)
+            modifier = Modifier.padding(vertical = 6.dp)
         )
 
         // Profile Avatar and Info
@@ -57,36 +57,36 @@ fun ProfileScreen(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(24.dp),
+                    .padding(18.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 // Large Profile Avatar
                 Box(
                     modifier = Modifier
-                        .size(120.dp)
+                        .size(90.dp)
                         .background(colors.primary, CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
                         text = userName.take(1).uppercase(),
-                        fontSize = 48.sp,
+                        fontSize = 36.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color.White
                     )
                 }
 
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(12.dp))
 
                 Text(
                     text = userName,
-                    fontSize = 24.sp,
+                    fontSize = 20.sp,
                     fontWeight = FontWeight.Bold,
                     color = colors.textPrimary
                 )
 
                 Text(
                     text = userEmail,
-                    fontSize = 16.sp,
+                    fontSize = 14.sp,
                     color = colors.textSecondary
                 )
             }
@@ -99,14 +99,14 @@ fun ProfileScreen(
             elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
         ) {
             Column(
-                modifier = Modifier.padding(16.dp)
+                modifier = Modifier.padding(12.dp)
             ) {
                 Text(
                     text = "Settings",
-                    fontSize = 18.sp,
+                    fontSize = 16.sp,
                     fontWeight = FontWeight.Bold,
                     color = colors.textPrimary,
-                    modifier = Modifier.padding(bottom = 16.dp)
+                    modifier = Modifier.padding(bottom = 12.dp)
                 )
 
                 ProfileMenuItem(
@@ -133,14 +133,14 @@ fun ProfileScreen(
                     colors = colors
                 )
 
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(12.dp))
 
                 // Logout Button inside settings card
                 Button(
                     onClick = onLogoutClick,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(56.dp),
+                        .height(50.dp),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = colors.error
                     ),
@@ -179,12 +179,12 @@ fun ProfileMenuItem(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = 12.dp),
+                .padding(vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Box(
                 modifier = Modifier
-                    .size(40.dp)
+                    .size(36.dp)
                     .background(colors.primary.copy(alpha = 0.1f), CircleShape),
                 contentAlignment = Alignment.Center
             ) {
@@ -192,24 +192,24 @@ fun ProfileMenuItem(
                     icon,
                     contentDescription = title,
                     tint = colors.primary,
-                    modifier = Modifier.size(20.dp)
+                    modifier = Modifier.size(18.dp)
                 )
             }
 
-            Spacer(modifier = Modifier.width(16.dp))
+            Spacer(modifier = Modifier.width(12.dp))
 
             Column(
                 modifier = Modifier.weight(1f)
             ) {
                 Text(
                     text = title,
-                    fontSize = 16.sp,
+                    fontSize = 14.sp,
                     fontWeight = FontWeight.Medium,
                     color = colors.textPrimary
                 )
                 Text(
                     text = subtitle,
-                    fontSize = 14.sp,
+                    fontSize = 12.sp,
                     color = colors.textSecondary
                 )
             }
@@ -218,7 +218,7 @@ fun ProfileMenuItem(
                 Icons.Default.ChevronRight,
                 contentDescription = "Navigate",
                 tint = colors.textSecondary,
-                modifier = Modifier.size(20.dp)
+                modifier = Modifier.size(18.dp)
             )
         }
     }
