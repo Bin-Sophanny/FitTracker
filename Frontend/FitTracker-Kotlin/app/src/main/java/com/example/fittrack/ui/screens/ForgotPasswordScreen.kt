@@ -177,7 +177,7 @@ fun ForgotPasswordScreen(
                         Button(
                             onClick = {
                                 errorMessage = null
-                                authViewModel.sendPasswordResetEmail(email)
+                                authViewModel.resetPassword(email)
                             },
                             modifier = Modifier
                                 .fillMaxWidth()

@@ -50,15 +50,27 @@ const generateToken = (user) => {
   );
 };
 
-// Middleware: Verify Firebase token
+// Middleware: Verify JWT or Firebase token
 const verifyFirebaseToken = async (req, res, next) => {
   const token = req.headers.authorization?.split('Bearer ')[1];
   if (!token) return res.status(401).json({ error: 'No token provided' });
 
   try {
-    const decodedToken = await admin.auth().verifyIdToken(token);
-    req.user = decodedToken;
-    next();
+    // First try to verify as JWT token
+    try {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      req.user = decoded;
+      return next();
+    } catch (jwtError) {
+      // If JWT fails, try Firebase token
+      try {
+        const decodedToken = await admin.auth().verifyIdToken(token);
+        req.user = decodedToken;
+        return next();
+      } catch (firebaseError) {
+        throw new Error('Invalid JWT or Firebase token');
+      }
+    }
   } catch (error) {
     res.status(403).json({ error: 'Invalid token' });
   }

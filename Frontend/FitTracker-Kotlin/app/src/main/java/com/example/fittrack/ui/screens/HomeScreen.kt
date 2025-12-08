@@ -24,14 +24,11 @@ import com.example.fittrack.data.api.ApiResult
 import androidx.lifecycle.viewmodel.compose.viewModel
 import java.text.SimpleDateFormat
 import java.util.*
-import com.example.fittrack.util.NetworkDiagnostics
-import com.example.fittrack.util.ConnectionResult
 import com.example.fittrack.util.StepCounterHelper
 import com.example.fittrack.service.StepCounterService
 import androidx.compose.ui.platform.LocalContext
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
-
 
 enum class ProfileScreen {
     MAIN,
@@ -49,7 +46,11 @@ fun HomeScreen(
     val context = LocalContext.current
     val themeManager = remember { ThemeManager() }
     val colors = getAppColors(themeManager.isDarkMode)
-    val fitnessViewModel: FitnessViewModel = viewModel()
+    val fitnessViewModel: FitnessViewModel = remember { FitnessViewModel(context) }
+    val scope = rememberCoroutineScope()
+
+    // Get userId from Firebase
+    val userId = remember { com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid ?: "" }
 
     var selectedTab by remember { mutableStateOf(0) }
     var selectedDate by remember { mutableStateOf(0) }
@@ -60,12 +61,6 @@ fun HomeScreen(
     var realTimeStats by remember { mutableStateOf<DailyStats?>(null) }
     var isSyncing by remember { mutableStateOf(false) }
 
-    // Backend diagnostics state
-    var showDiagnostics by remember { mutableStateOf(false) }
-    var diagnosticResult by remember { mutableStateOf<String?>(null) }
-    var isTesting by remember { mutableStateOf(false) }
-    val scope = rememberCoroutineScope()
-
     // Fetch data from backend API
     val dailyStatsState by fitnessViewModel.dailyStatsState.collectAsState()
 
@@ -74,10 +69,11 @@ fun HomeScreen(
         StepCounterService.start(context)
         fitnessViewModel.getDailyStats(limit = 5)
 
-        // Update real-time steps every second
         while (true) {
             realTimeSteps = StepCounterHelper.getCurrentSteps(context)
-            realTimeStats = StepCounterHelper.getCurrentDailyStats(context)
+            realTimeStats = if (userId.isNotEmpty()) {
+                StepCounterHelper.getCurrentDailyStats(context, userId)
+            } else null
             delay(1000)
         }
     }
@@ -86,7 +82,7 @@ fun HomeScreen(
     LaunchedEffect(dailyStatsState, realTimeSteps) {
         if (dailyStatsState is ApiResult.Success &&
             (dailyStatsState as ApiResult.Success<List<DailyStats>>).data.isEmpty() &&
-            realTimeSteps > 0 && !isSyncing) {
+            realTimeSteps > 0 && !isSyncing && userId.isNotEmpty()) {
 
             android.util.Log.d("HomeScreen", "🔄 Auto-sync: Backend empty but we have $realTimeSteps steps locally")
             delay(2000) // Wait 2 seconds before auto-sync
@@ -95,11 +91,13 @@ fun HomeScreen(
                 isSyncing = true
                 try {
                     val stats = realTimeStats ?: DailyStats(
+                        userId = userId,
                         date = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date()),
                         steps = realTimeSteps,
                         calories = 0,
                         distance = 0f,
-                        activeMinutes = 0
+                        activeMinutes = 0,
+                        heartRate = null
                     )
                     android.util.Log.d("HomeScreen", "📤 Auto-syncing: ${stats.steps} steps")
                     fitnessViewModel.syncStepsToBackend(stats)
@@ -122,11 +120,13 @@ fun HomeScreen(
             android.util.Log.d("HomeScreen", "🔄 Manual sync triggered by user")
             try {
                 val stats = realTimeStats ?: DailyStats(
+                    userId = userId,
                     date = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date()),
                     steps = realTimeSteps,
                     calories = 0,
                     distance = 0f,
-                    activeMinutes = 0
+                    activeMinutes = 0,
+                    heartRate = null
                 )
                 android.util.Log.d("HomeScreen", "📤 Syncing: ${stats.steps} steps")
                 fitnessViewModel.syncStepsToBackend(stats)
@@ -193,11 +193,13 @@ fun HomeScreen(
             if (data.isEmpty()) {
                 android.util.Log.w("HomeScreen", "⚠️ Backend data empty, using real-time only")
                 listOf(realTimeStats ?: DailyStats(
+                    userId = userId,
                     date = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date()),
                     steps = realTimeSteps,
                     calories = 0,
                     distance = 0f,
-                    activeMinutes = 0
+                    activeMinutes = 0,
+                    heartRate = null
                 ))
             } else {
                 android.util.Log.d("HomeScreen", "✅ Displaying ${data.size} days of data")
@@ -208,25 +210,43 @@ fun HomeScreen(
             android.util.Log.w("HomeScreen", "⚠️ Backend ERROR - showing real-time data only")
             // Backend not connected - show real-time data only
             listOf(realTimeStats ?: DailyStats(
+                userId = userId,
                 date = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date()),
                 steps = realTimeSteps,
                 calories = 0,
                 distance = 0f,
-                activeMinutes = 0
+                activeMinutes = 0,
+                heartRate = null
             ))
         }
         else -> {
             android.util.Log.d("HomeScreen", "⏳ Loading state - showing real-time data")
             // Loading state - show real-time data or default
             listOf(realTimeStats ?: DailyStats(
+                userId = userId,
                 date = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date()),
                 steps = realTimeSteps,
                 calories = 0,
                 distance = 0f,
-                activeMinutes = 0
+                activeMinutes = 0,
+                heartRate = null
             ))
         }
     }
+
+    // Only show error banner if there's an actual connection error
+    // BUT - steps should still count locally even if backend is down!
+    val isActualError = dailyStatsState is ApiResult.Error
+    val errorMessage = if (dailyStatsState is ApiResult.Error) {
+        (dailyStatsState as ApiResult.Error).message
+    } else ""
+
+    // Only show banner if it's a network/connection error (not 404 or empty data)
+    val showBanner = isActualError &&
+        (errorMessage.contains("Failed to connect", ignoreCase = true) ||
+         errorMessage.contains("Unable to resolve host", ignoreCase = true) ||
+         errorMessage.contains("timeout", ignoreCase = true) ||
+         errorMessage.contains("Connection refused", ignoreCase = true))
 
     CompositionLocalProvider(LocalThemeManager provides themeManager) {
         Box(
@@ -292,12 +312,6 @@ fun HomeScreen(
             }
 
             // Show backend connection status banner as overlay at the top
-            // Only show error banner if there's an actual connection error, not just empty data
-            val isActualError = dailyStatsState is ApiResult.Error
-            val isEmptyData = dailyStatsState is ApiResult.Success &&
-                (dailyStatsState as ApiResult.Success<List<DailyStats>>).data.isEmpty()
-            val showBanner = isActualError
-
             if (showBanner) {
                 Card(
                     modifier = Modifier
@@ -310,93 +324,23 @@ fun HomeScreen(
                     ),
                     elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
                 ) {
-                    Column(modifier = Modifier.padding(12.dp)) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(
-                                Icons.Default.CloudOff,
-                                contentDescription = null,
-                                tint = Color(0xFFE53E3E),
-                                modifier = Modifier.size(20.dp)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = "Backend not connected",
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Color(0xFFE53E3E)
-                            )
-                            Spacer(modifier = Modifier.weight(1f))
-                            Button(
-                                onClick = {
-                                    showDiagnostics = !showDiagnostics
-                                    if (showDiagnostics && diagnosticResult == null) {
-                                        isTesting = true
-                                        scope.launch {
-                                            val result = NetworkDiagnostics.testBackendConnection()
-                                            diagnosticResult = when (result) {
-                                                is ConnectionResult.Success -> "✅ ${result.message}"
-                                                is ConnectionResult.Error -> result.message
-                                            }
-                                            isTesting = false
-                                        }
-                                    }
-                                },
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = Color(0xFFE53E3E)
-                                ),
-                                modifier = Modifier.height(32.dp),
-                                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)
-                            ) {
-                                Text(
-                                    text = if (showDiagnostics) "Hide" else "Diagnose",
-                                    fontSize = 11.sp
-                                )
-                            }
-                        }
-
-                        if (showDiagnostics) {
-                            Spacer(modifier = Modifier.height(8.dp))
-                            HorizontalDivider(color = Color(0xFFE53E3E).copy(alpha = 0.3f))
-                            Spacer(modifier = Modifier.height(8.dp))
-
-                            if (isTesting) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    CircularProgressIndicator(
-                                        modifier = Modifier.size(14.dp),
-                                        color = Color(0xFFE53E3E),
-                                        strokeWidth = 2.dp
-                                    )
-                                    Spacer(modifier = Modifier.width(6.dp))
-                                    Text(
-                                        text = "Testing connection...",
-                                        fontSize = 10.sp,
-                                        color = Color(0xFF666666)
-                                    )
-                                }
-                            } else if (diagnosticResult != null) {
-                                Text(
-                                    text = diagnosticResult ?: "",
-                                    fontSize = 10.sp,
-                                    color = Color(0xFF333333),
-                                    lineHeight = 14.sp
-                                )
-                                Spacer(modifier = Modifier.height(6.dp))
-                                Text(
-                                    text = "📋 Check BACKEND_CONNECTION_DEBUG.md",
-                                    fontSize = 9.sp,
-                                    color = Color(0xFF666666),
-                                    fontWeight = FontWeight.Bold
-                                )
-                            } else {
-                                Text(
-                                    text = "Click 'Diagnose' to test",
-                                    fontSize = 10.sp,
-                                    color = Color(0xFF666666)
-                                )
-                            }
-                        }
+                    Row(
+                        modifier = Modifier.padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            Icons.Default.CloudOff,
+                            contentDescription = null,
+                            tint = Color(0xFFE53E3E),
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "Backend not connected - Steps counting locally",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFFE53E3E)
+                        )
                     }
                 }
             }
@@ -412,36 +356,27 @@ fun HomeScreen(
                 shape = RoundedCornerShape(16.dp)
             ) {
                 Row(
-                    modifier = Modifier
-                        .wrapContentSize()
-                        .padding(horizontal = 12.dp, vertical = 5.dp),
-                    horizontalArrangement = Arrangement.spacedBy(18.dp)
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Main Tab
-                    FloatingNavItem(
+                    NavigationButton(
                         icon = Icons.Default.Home,
-                        title = "Main",
+                        label = "Home",
                         isSelected = selectedTab == 0,
-                        onClick = { selectedTab = 0 },
-                        colors = colors
+                        onClick = { selectedTab = 0 }
                     )
-
-                    // Stats Tab
-                    FloatingNavItem(
-                        icon = Icons.Default.Analytics,
-                        title = "Stats",
+                    NavigationButton(
+                        icon = Icons.Default.Assessment,
+                        label = "Stats",
                         isSelected = selectedTab == 1,
-                        onClick = { selectedTab = 1 },
-                        colors = colors
+                        onClick = { selectedTab = 1 }
                     )
-
-                    // Profile Tab
-                    FloatingNavItem(
+                    NavigationButton(
                         icon = Icons.Default.Person,
-                        title = "Profile",
+                        label = "Profile",
                         isSelected = selectedTab == 2,
-                        onClick = { selectedTab = 2 },
-                        colors = colors
+                        onClick = { selectedTab = 2 }
                     )
                 }
             }
@@ -450,44 +385,43 @@ fun HomeScreen(
 }
 
 @Composable
-fun FloatingNavItem(
+fun NavigationButton(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
-    title: String,
+    label: String,
     isSelected: Boolean,
-    onClick: () -> Unit,
-    colors: com.example.fittrack.ui.theme.AppColors
+    onClick: () -> Unit
 ) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
+    val colors = getAppColors(LocalThemeManager.current.isDarkMode)
+
+    Box(
         modifier = Modifier
-            .clickable { onClick() }
-            .padding(2.dp)
+            .height(56.dp)
+            .clickable(onClick = onClick)
+            .background(
+                color = if (isSelected) colors.primary.copy(alpha = 0.1f) else Color.Transparent,
+                shape = RoundedCornerShape(12.dp)
+            )
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        contentAlignment = Alignment.Center
     ) {
-        Box(
-            modifier = Modifier
-                .size(36.dp)
-                .background(
-                    if (isSelected) colors.primary else Color.Transparent,
-                    CircleShape
-                ),
-            contentAlignment = Alignment.Center
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
         ) {
             Icon(
                 imageVector = icon,
-                contentDescription = title,
-                tint = if (isSelected) Color.White else colors.textSecondary,
-                modifier = Modifier.size(22.dp)
+                contentDescription = label,
+                tint = if (isSelected) colors.primary else colors.textSecondary,
+                modifier = Modifier.size(24.dp)
+            )
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(
+                text = label,
+                fontSize = 11.sp,
+                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                color = if (isSelected) colors.primary else colors.textSecondary
             )
         }
-
-        Spacer(modifier = Modifier.height(2.dp))
-
-        Text(
-            text = title,
-            fontSize = 11.sp,
-            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-            color = if (isSelected) colors.primary else colors.textSecondary
-        )
     }
 }
 

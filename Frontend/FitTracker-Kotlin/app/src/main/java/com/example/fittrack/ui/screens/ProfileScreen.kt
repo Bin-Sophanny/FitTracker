@@ -125,6 +125,7 @@ fun ProfileScreen(
                     colors = colors
                 )
 
+
                 ProfileMenuItem(
                     icon = Icons.Default.Info,
                     title = "About",

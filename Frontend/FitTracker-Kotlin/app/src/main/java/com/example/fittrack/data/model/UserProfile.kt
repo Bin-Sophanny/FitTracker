@@ -5,13 +5,14 @@ package com.example.fittrack.data.model
  * Matches backend user-service model
  */
 data class UserProfile(
-    val uid: String,                // Firebase UID
-    val email: String,              // User email
-    val displayName: String,        // User full name
-    val age: Int? = null,           // User age (optional)
-    val weight: Float? = null,      // Weight in kg (optional)
-    val height: Float? = null,      // Height in cm (optional)
-    val profileImage: String? = null // Profile image URL (optional)
+    val id: String? = null,                // MongoDB _id
+    val firebaseUid: String,               // Firebase UID
+    val email: String,                     // User email
+    val displayName: String? = null,       // User full name
+    val photoUrl: String? = null,          // Profile image URL
+    val createdAt: String? = null,
+    val updatedAt: String? = null
+    // REMOVED: age, weight, height, profileImage (not in backend)
 )
 
 /**
@@ -19,11 +20,7 @@ data class UserProfile(
  */
 data class UpdateProfileRequest(
     val displayName: String? = null,
-    val age: Int? = null,
-    val weight: Float? = null,
-    val height: Float? = null,
-    val profileImage: String? = null,
-    val photoUrl: String? = null,        // For API compatibility
-    val walletAddress: String? = null    // For blockchain wallet linking
+    val photoUrl: String? = null
+    // REMOVED: age, weight, height, profileImage, walletAddress (not in backend)
 )
 

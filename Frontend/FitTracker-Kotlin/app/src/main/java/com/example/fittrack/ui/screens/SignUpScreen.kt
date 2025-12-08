@@ -33,6 +33,7 @@ fun SignUpScreen(
     onSignUpSuccess: () -> Unit,
     onBackToSignInClick: () -> Unit
 ) {
+    val context = androidx.compose.ui.platform.LocalContext.current
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
@@ -275,7 +276,7 @@ fun SignUpScreen(
                     Button(
                         onClick = {
                             errorMessage = null
-                            authViewModel.signUp(name, email, password)
+                            authViewModel.signUp(name, email, password, context)
                         },
                         modifier = Modifier
                             .fillMaxWidth()

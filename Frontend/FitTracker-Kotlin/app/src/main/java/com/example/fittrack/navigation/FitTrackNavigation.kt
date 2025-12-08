@@ -2,6 +2,7 @@ package com.example.fittrack.navigation
 
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.fittrack.auth.AuthState
 import com.example.fittrack.auth.AuthViewModel
@@ -20,6 +21,7 @@ fun FitTrackNavigation(
     modifier: Modifier = Modifier,
     authViewModel: AuthViewModel = viewModel()
 ) {
+    val context = LocalContext.current
     val authState by authViewModel.authState.collectAsState()
     val isAuthenticated by authViewModel.isAuthenticated.collectAsState()
 
@@ -95,7 +97,7 @@ fun FitTrackNavigation(
                 userName = userName,
                 userEmail = userEmail,
                 onLogoutClick = {
-                    authViewModel.signOut()
+                    authViewModel.signOut(context)
                     currentScreen = Screen.SIGN_IN
                 }
             )

@@ -28,14 +28,16 @@ object StepCounterHelper {
         return prefs.getInt(KEY_STEPS_TODAY, 0)
     }
 
-    fun getCurrentDailyStats(context: Context): DailyStats {
+    fun getCurrentDailyStats(context: Context, userId: String): DailyStats {
         val steps = getCurrentSteps(context)
         return DailyStats(
+            userId = userId,
             date = getCurrentDate(),
             steps = steps,
             calories = estimateCalories(steps),
             distance = estimateDistance(steps),
-            activeMinutes = estimateActiveMinutes(steps)
+            activeMinutes = estimateActiveMinutes(steps),
+            heartRate = null
         )
     }
 

@@ -23,11 +23,12 @@ data class TokenTransaction(
 
 /**
  * Response after awarding tokens
+ * Matches backend /api/blockchain/rewards POST response
  */
 data class RewardResponse(
     val message: String,
     val tokensAwarded: Int,
-    val newBalance: Int,
-    val transactionHash: String? = null
+    val newBalance: String,          // Backend returns this as String
+    val transactionHash: String
 )
 

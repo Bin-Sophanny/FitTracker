@@ -29,6 +29,7 @@ class StepCounterService : Service(), SensorEventListener {
     private lateinit var sensorManager: SensorManager
     private var stepCounterSensor: Sensor? = null
     private var stepDetectorSensor: Sensor? = null
+    private var accelerometerSensor: Sensor? = null
 
     private val serviceScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private val repository = FitTrackRepository()
@@ -51,6 +52,12 @@ class StepCounterService : Service(), SensorEventListener {
     private var lastSyncDate = ""
     private var lastBackendSync = 0L
 
+    // Accelerometer-based step detection
+    private var lastAccelUpdate = 0L
+    private var lastAccelValue = 10f
+    private val ACCEL_THRESHOLD = 2.0f
+    private val STEP_DELAY_MS = 250L
+
     // Sync configuration
     private val SYNC_INTERVAL_MS = 5 * 60 * 1000L // 5 minutes
     private val SYNC_STEP_THRESHOLD = 50 // Sync every 50 steps
@@ -71,25 +78,39 @@ class StepCounterService : Service(), SensorEventListener {
 
     override fun onCreate() {
         super.onCreate()
-        Log.d(TAG, "StepCounterService created")
+        Log.d(TAG, "========================================")
+        Log.d(TAG, "🚀 StepCounterService STARTING")
+        Log.d(TAG, "========================================")
         Log.d(TAG, "👤 User: ${auth.currentUser?.email ?: "Anonymous"}")
         Log.d(TAG, "📂 Storage: ${getPrefsName()}")
 
         sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
 
-        // Try to use Step Counter sensor first (more accurate)
+        // Try to use Step Counter sensor first (most accurate)
         stepCounterSensor = sensorManager.getDefaultSensor(Sensor.TYPE_STEP_COUNTER)
 
-        // Fallback to Step Detector if Step Counter not available
-        if (stepCounterSensor == null) {
-            stepDetectorSensor = sensorManager.getDefaultSensor(Sensor.TYPE_STEP_DETECTOR)
-            Log.d(TAG, "Using Step Detector sensor")
-        } else {
-            Log.d(TAG, "Using Step Counter sensor")
+        // Try Step Detector as second option
+        stepDetectorSensor = sensorManager.getDefaultSensor(Sensor.TYPE_STEP_DETECTOR)
+
+        // Use Accelerometer as fallback (works on all devices)
+        accelerometerSensor = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
+
+        Log.d(TAG, "")
+        Log.d(TAG, "📱 SENSOR AVAILABILITY:")
+        Log.d(TAG, "  Step Counter: ${if (stepCounterSensor != null) "✅ YES" else "❌ NO"}")
+        Log.d(TAG, "  Step Detector: ${if (stepDetectorSensor != null) "✅ YES" else "❌ NO"}")
+        Log.d(TAG, "  Accelerometer: ${if (accelerometerSensor != null) "✅ YES" else "❌ NO"}")
+        Log.d(TAG, "")
+
+        if (stepCounterSensor == null && stepDetectorSensor == null && accelerometerSensor == null) {
+            Log.e(TAG, "❌❌❌ CRITICAL: NO SENSORS AVAILABLE! ❌❌❌")
+            Log.e(TAG, "Device does not support step counting")
         }
 
         loadStepsFromPrefs()
         registerSensorListeners()
+
+        Log.d(TAG, "========================================")
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -111,18 +132,47 @@ class StepCounterService : Service(), SensorEventListener {
     }
 
     private fun registerSensorListeners() {
+        Log.d(TAG, "📡 REGISTERING SENSORS...")
+
+        var registeredCount = 0
+
         stepCounterSensor?.let {
-            sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_NORMAL)
-            Log.d(TAG, "Step Counter sensor registered")
+            val registered = sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_NORMAL)
+            if (registered) {
+                Log.d(TAG, "✅ Step Counter sensor REGISTERED")
+                registeredCount++
+            } else {
+                Log.e(TAG, "❌ Step Counter sensor FAILED to register")
+            }
         }
 
         stepDetectorSensor?.let {
-            sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_NORMAL)
-            Log.d(TAG, "Step Detector sensor registered")
+            val registered = sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_NORMAL)
+            if (registered) {
+                Log.d(TAG, "✅ Step Detector sensor REGISTERED")
+                registeredCount++
+            } else {
+                Log.e(TAG, "❌ Step Detector sensor FAILED to register")
+            }
         }
 
-        if (stepCounterSensor == null && stepDetectorSensor == null) {
-            Log.e(TAG, "No step sensors available on this device")
+        // Register accelerometer as fallback
+        if (stepCounterSensor == null && stepDetectorSensor == null && accelerometerSensor != null) {
+            val registered = sensorManager.registerListener(this, accelerometerSensor, SensorManager.SENSOR_DELAY_NORMAL)
+            if (registered) {
+                Log.d(TAG, "✅ Accelerometer sensor REGISTERED (fallback mode)")
+                Log.w(TAG, "⚠️ Using accelerometer - less accurate but works on all devices")
+                registeredCount++
+            } else {
+                Log.e(TAG, "❌ Accelerometer sensor FAILED to register")
+            }
+        }
+
+        if (registeredCount == 0) {
+            Log.e(TAG, "❌❌❌ CRITICAL: NO SENSORS REGISTERED! ❌❌❌")
+            Log.e(TAG, "Step counting will NOT work!")
+        } else {
+            Log.d(TAG, "✅ Total sensors registered: $registeredCount")
         }
     }
 
@@ -137,11 +187,16 @@ class StepCounterService : Service(), SensorEventListener {
                         // First reading - set as baseline
                         initialSteps = totalSteps
                         saveStepsToPrefs()
+                        Log.d(TAG, "🎯 Initial step baseline set: $initialSteps")
                     }
 
                     val previousSteps = stepsToday
                     stepsToday = totalSteps - initialSteps
-                    Log.d(TAG, "👟 Steps today: $stepsToday (Total: $totalSteps, Initial: $initialSteps)")
+
+                    if (stepsToday != previousSteps) {
+                        Log.d(TAG, "👟 STEP COUNTER: $stepsToday steps (Total: $totalSteps, Baseline: $initialSteps, +${stepsToday - previousSteps})")
+                    }
+
                     saveStepsToPrefs()
 
                     // Sync every 50 steps or every 5 minutes
@@ -156,13 +211,40 @@ class StepCounterService : Service(), SensorEventListener {
                     // Step Detector fires once per step
                     val previousSteps = stepsToday
                     stepsToday++
-                    Log.d(TAG, "Step detected. Total: $stepsToday")
+                    Log.d(TAG, "👟 STEP DETECTOR: Step detected! Total: $stepsToday")
                     saveStepsToPrefs()
 
                     // Sync every 50 steps or every 5 minutes
                     if (shouldSyncToBackend(previousSteps)) {
                         syncToBackend()
                     }
+                }
+
+                Sensor.TYPE_ACCELEROMETER -> {
+                    // Accelerometer-based step detection (fallback)
+                    val x = it.values[0]
+                    val y = it.values[1]
+                    val z = it.values[2]
+
+                    val acceleration = kotlin.math.sqrt((x * x + y * y + z * z).toDouble()).toFloat()
+                    val delta = kotlin.math.abs(acceleration - lastAccelValue)
+
+                    val currentTime = System.currentTimeMillis()
+
+                    // Detect step if acceleration changed significantly and enough time passed
+                    if (delta > ACCEL_THRESHOLD && (currentTime - lastAccelUpdate) > STEP_DELAY_MS) {
+                        val previousSteps = stepsToday
+                        stepsToday++
+                        lastAccelUpdate = currentTime
+                        Log.d(TAG, "👟 ACCELEROMETER: Step detected! Total: $stepsToday (delta: $delta)")
+                        saveStepsToPrefs()
+
+                        if (shouldSyncToBackend(previousSteps)) {
+                            syncToBackend()
+                        }
+                    }
+
+                    lastAccelValue = acceleration
                 }
             }
         }
@@ -230,17 +312,25 @@ class StepCounterService : Service(), SensorEventListener {
                 Log.d(TAG, "👤 User: ${auth.currentUser?.email}")
                 Log.d(TAG, "📊 Current steps: $stepsToday")
 
+                val userId = auth.currentUser?.uid
+                if (userId == null) {
+                    Log.e(TAG, "❌ Cannot sync: No user ID available")
+                    return@launch
+                }
+
                 val stats = DailyStats(
+                    userId = userId,
                     date = getCurrentDate(),
                     steps = stepsToday,
                     calories = estimateCalories(stepsToday),
                     distance = estimateDistance(stepsToday),
-                    activeMinutes = estimateActiveMinutes(stepsToday)
+                    activeMinutes = estimateActiveMinutes(stepsToday),
+                    heartRate = null
                 )
 
                 Log.d(TAG, "📤 Stats to sync: date=${stats.date}, steps=${stats.steps}, calories=${stats.calories}, distance=${stats.distance}km")
 
-                val response = repository.logDailyStats(stats)
+                val response = repository.logDailyStats(this@StepCounterService, stats)
 
                 if (response.isSuccessful) {
                     lastBackendSync = System.currentTimeMillis()

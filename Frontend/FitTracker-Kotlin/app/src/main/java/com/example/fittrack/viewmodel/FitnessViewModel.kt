@@ -1,5 +1,6 @@
 package com.example.fittrack.viewmodel
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.fittrack.data.api.ApiResult
@@ -16,6 +17,7 @@ import kotlinx.coroutines.launch
  * Use this in your screens to fetch and manage data
  */
 class FitnessViewModel(
+    private val context: Context,
     private val repository: FitTrackRepository = FitTrackRepository()
 ) : ViewModel() {
 
@@ -23,9 +25,9 @@ class FitnessViewModel(
     private val _dailyStatsState = MutableStateFlow<ApiResult<List<DailyStats>>>(ApiResult.Loading)
     val dailyStatsState: StateFlow<ApiResult<List<DailyStats>>> = _dailyStatsState.asStateFlow()
 
-    // User Profile State (using API UserProfile type)
-    private val _userProfileState = MutableStateFlow<ApiResult<com.example.fittrack.api.UserProfile>>(ApiResult.Loading)
-    val userProfileState: StateFlow<ApiResult<com.example.fittrack.api.UserProfile>> = _userProfileState.asStateFlow()
+    // User Profile State
+    private val _userProfileState = MutableStateFlow<ApiResult<UserProfile>>(ApiResult.Loading)
+    val userProfileState: StateFlow<ApiResult<UserProfile>> = _userProfileState.asStateFlow()
 
     // Workouts State
     private val _workoutsState = MutableStateFlow<ApiResult<List<Workout>>>(ApiResult.Loading)
@@ -52,7 +54,7 @@ class FitnessViewModel(
             android.util.Log.d("FitnessViewModel", "State set to: Loading")
 
             val result = safeApiCall {
-                repository.getDailyStats(limit)
+                repository.getDailyStats(context, limit)
             }
 
             _dailyStatsState.value = result
@@ -85,7 +87,7 @@ class FitnessViewModel(
     fun logDailyStats(stats: DailyStats, onSuccess: () -> Unit = {}) {
         viewModelScope.launch {
             val result = safeApiCall {
-                repository.logDailyStats(stats)
+                repository.logDailyStats(context, stats)
             }
             if (result is ApiResult.Success) {
                 onSuccess()
@@ -101,7 +103,7 @@ class FitnessViewModel(
         viewModelScope.launch {
             android.util.Log.d("FitnessViewModel", "🔄 Syncing stats to backend...")
             val result = safeApiCall {
-                repository.logDailyStats(stats)
+                repository.logDailyStats(context, stats)
             }
             when (result) {
                 is ApiResult.Success -> {
@@ -122,7 +124,7 @@ class FitnessViewModel(
         viewModelScope.launch {
             _userProfileState.value = ApiResult.Loading
             _userProfileState.value = safeApiCall {
-                repository.getUserProfile()
+                repository.getUserProfile(context)
             }
         }
     }
@@ -133,7 +135,7 @@ class FitnessViewModel(
     fun updateProfile(profile: UpdateProfileRequest, onSuccess: () -> Unit = {}) {
         viewModelScope.launch {
             val result = safeApiCall {
-                repository.updateProfile(profile)
+                repository.updateProfile(context, profile)
             }
             if (result is ApiResult.Success) {
                 onSuccess()

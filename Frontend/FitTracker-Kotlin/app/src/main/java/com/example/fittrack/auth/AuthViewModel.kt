@@ -1,5 +1,6 @@
 package com.example.fittrack.auth
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -7,8 +8,10 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import android.util.Patterns
-import com.example.fittrack.data.repository.FitTrackRepository
 import android.util.Log
+import com.example.fittrack.data.repository.FitTrackRepository
+import com.example.fittrack.data.model.LoginRequest
+import com.example.fittrack.data.model.RegisterRequest
 
 sealed class AuthState {
     object Idle : AuthState()
@@ -23,6 +26,9 @@ class AuthViewModel : ViewModel() {
 
     private val _authState = MutableStateFlow<AuthState>(AuthState.Idle)
     val authState: StateFlow<AuthState> = _authState.asStateFlow()
+
+    private val _jwtToken = MutableStateFlow<String?>(null)
+    val jwtToken: StateFlow<String?> = _jwtToken.asStateFlow()
 
     private val _isAuthenticated = MutableStateFlow(false)
     val isAuthenticated: StateFlow<Boolean> = _isAuthenticated.asStateFlow()
@@ -63,7 +69,7 @@ class AuthViewModel : ViewModel() {
         }
     }
 
-    fun signIn(email: String, password: String) {
+    fun signIn(email: String, password: String, context: Context) {
         // Validate email
         val emailError = validateEmail(email)
         if (emailError != null) {
@@ -80,27 +86,45 @@ class AuthViewModel : ViewModel() {
 
         viewModelScope.launch {
             _authState.value = AuthState.Loading
+
+            // Step 1: Firebase Authentication
             val result = authRepository.signIn(email, password)
             result.fold(
                 onSuccess = { user ->
-                    // Firebase sign-in successful, now register/login to backend
+                    Log.d("AuthViewModel", "✅ Firebase sign-in successful: ${user.email}")
+
+                    // Step 2: Call Backend Login API to get JWT token
                     try {
-                        val backendResponse = backendRepository.loginUser(user.email ?: email)
+                        val loginRequest = LoginRequest(
+                            firebaseUid = user.uid,
+                            email = user.email ?: email
+                        )
+
+                        val backendResponse = backendRepository.loginUser(loginRequest)
+
                         if (backendResponse.isSuccessful) {
-                            Log.d("AuthViewModel", "Backend login successful")
-                            _authState.value = AuthState.Success(user)
-                            _isAuthenticated.value = true
+                            val authResponse = backendResponse.body()
+                            if (authResponse?.success == true) {
+                                // Save JWT token
+                                val jwtToken = authResponse.token
+                                TokenManager.saveToken(context, jwtToken, user.uid)
+                                _jwtToken.value = jwtToken
+
+                                Log.d("AuthViewModel", "✅ Backend login successful")
+                                Log.d("AuthViewModel", "🔑 JWT Token: ${jwtToken.take(20)}...")
+                                Log.d("AuthViewModel", "👤 User ID (Firebase UID): ${user.uid}")
+
+                                _authState.value = AuthState.Success(user)
+                                _isAuthenticated.value = true
+                            } else {
+                                _authState.value = AuthState.Error("Backend login failed")
+                            }
                         } else {
-                            Log.e("AuthViewModel", "Backend login failed: ${backendResponse.code()}")
-                            // Still allow user to proceed if backend fails
-                            _authState.value = AuthState.Success(user)
-                            _isAuthenticated.value = true
+                            _authState.value = AuthState.Error("Backend login failed: ${backendResponse.code()}")
                         }
                     } catch (e: Exception) {
-                        Log.e("AuthViewModel", "Backend login error: ${e.message}")
-                        // Still allow user to proceed if backend fails
-                        _authState.value = AuthState.Success(user)
-                        _isAuthenticated.value = true
+                        Log.e("AuthViewModel", "❌ Backend login error: ${e.message}")
+                        _authState.value = AuthState.Error("Backend connection failed: ${e.message}")
                     }
                 },
                 onFailure = { exception ->
@@ -112,7 +136,7 @@ class AuthViewModel : ViewModel() {
         }
     }
 
-    fun signUp(name: String, email: String, password: String) {
+    fun signUp(name: String, email: String, password: String, context: Context) {
         // Validate name
         val nameError = validateName(name)
         if (nameError != null) {
@@ -136,30 +160,46 @@ class AuthViewModel : ViewModel() {
 
         viewModelScope.launch {
             _authState.value = AuthState.Loading
+
+            // Step 1: Firebase Registration
             val result = authRepository.signUp(name, email, password)
             result.fold(
                 onSuccess = { user ->
-                    // Firebase sign-up successful, now register to backend
+                    Log.d("AuthViewModel", "✅ Firebase sign-up successful: ${user.email}")
+
+                    // Step 2: Call Backend Register API to get JWT token
                     try {
-                        val backendResponse = backendRepository.registerUser(
-                            displayName = name,
-                            email = user.email ?: email
+                        val registerRequest = RegisterRequest(
+                            firebaseUid = user.uid,
+                            email = user.email ?: email,
+                            displayName = name
                         )
+
+                        val backendResponse = backendRepository.registerUser(registerRequest)
+
                         if (backendResponse.isSuccessful) {
-                            Log.d("AuthViewModel", "Backend registration successful")
-                            _authState.value = AuthState.Success(user)
-                            _isAuthenticated.value = true
+                            val authResponse = backendResponse.body()
+                            if (authResponse?.success == true) {
+                                // Save JWT token
+                                val jwtToken = authResponse.token
+                                TokenManager.saveToken(context, jwtToken, user.uid)
+                                _jwtToken.value = jwtToken
+
+                                Log.d("AuthViewModel", "✅ Backend registration successful")
+                                Log.d("AuthViewModel", "🔑 JWT Token: ${jwtToken.take(20)}...")
+                                Log.d("AuthViewModel", "👤 User ID (Firebase UID): ${user.uid}")
+
+                                _authState.value = AuthState.Success(user)
+                                _isAuthenticated.value = true
+                            } else {
+                                _authState.value = AuthState.Error("Backend registration failed")
+                            }
                         } else {
-                            Log.e("AuthViewModel", "Backend registration failed: ${backendResponse.code()}")
-                            // Still allow user to proceed if backend fails
-                            _authState.value = AuthState.Success(user)
-                            _isAuthenticated.value = true
+                            _authState.value = AuthState.Error("Backend registration failed: ${backendResponse.code()}")
                         }
                     } catch (e: Exception) {
-                        Log.e("AuthViewModel", "Backend registration error: ${e.message}")
-                        // Still allow user to proceed if backend fails
-                        _authState.value = AuthState.Success(user)
-                        _isAuthenticated.value = true
+                        Log.e("AuthViewModel", "❌ Backend registration error: ${e.message}")
+                        _authState.value = AuthState.Error("Backend connection failed: ${e.message}")
                     }
                 },
                 onFailure = { exception ->
@@ -171,7 +211,7 @@ class AuthViewModel : ViewModel() {
         }
     }
 
-    fun sendPasswordResetEmail(email: String) {
+    fun resetPassword(email: String) {
         // Validate email
         val emailError = validateEmail(email)
         if (emailError != null) {
@@ -184,7 +224,9 @@ class AuthViewModel : ViewModel() {
             val result = authRepository.sendPasswordResetEmail(email)
             result.fold(
                 onSuccess = {
-                    _authState.value = AuthState.Success(authRepository.currentUser!!)
+                    // Password reset email sent successfully
+                    // Return to idle state so user can go back to login
+                    _authState.value = AuthState.Idle
                 },
                 onFailure = { exception ->
                     _authState.value = AuthState.Error(
@@ -195,10 +237,13 @@ class AuthViewModel : ViewModel() {
         }
     }
 
-    fun signOut() {
+    fun signOut(context: Context) {
         authRepository.signOut()
+        TokenManager.clearToken(context)
+        _jwtToken.value = null
         _isAuthenticated.value = false
         _authState.value = AuthState.Idle
+        Log.d("AuthViewModel", "✅ Signed out and cleared JWT token")
     }
 
     fun resetAuthState() {

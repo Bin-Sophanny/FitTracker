@@ -6,189 +6,122 @@ import retrofit2.http.*
 
 /**
  * Retrofit API Service interface for FitTracker Backend
- * All endpoints require Firebase authentication token in Authorization header
+ * All endpoints match the actual backend routes
  */
 interface ApiService {
 
-    // ==================== User Service Endpoints ====================
+    // ==================== AUTH ROUTES ====================
 
     /**
-     * Get user profile information
+     * Register new user
+     * POST /api/auth/register
      */
-    @GET("api/user/profile")
-    suspend fun getUserProfile(
+    @POST("api/auth/register")
+    suspend fun register(
+        @Body request: RegisterRequest
+    ): Response<AuthResponse>
+
+    /**
+     * Login user
+     * POST /api/auth/login
+     */
+    @POST("api/auth/login")
+    suspend fun login(
+        @Body request: LoginRequest
+    ): Response<AuthResponse>
+
+    /**
+     * Get user profile
+     * GET /api/auth/profile
+     */
+    @GET("api/auth/profile")
+    suspend fun getProfile(
         @Header("Authorization") token: String
     ): Response<UserProfile>
 
     /**
      * Update user profile
+     * PUT /api/auth/profile
      */
-    @PUT("api/user/profile")
+    @PUT("api/auth/profile")
     suspend fun updateProfile(
         @Header("Authorization") token: String,
-        @Body profile: UpdateProfileRequest
+        @Body request: UpdateProfileRequest
     ): Response<UserProfile>
 
+
+    // ==================== FITNESS ROUTES ====================
+
     /**
-     * Delete user account
+     * Log fitness data
+     * POST /api/fitness/log
      */
-    @DELETE("api/user/account")
-    suspend fun deleteAccount(
+    @POST("api/fitness/log")
+    suspend fun logFitness(
+        @Header("Authorization") token: String,
+        @Body request: LogFitnessRequest
+    ): Response<FitnessLogResponse>
+
+    /**
+     * Get today's fitness data
+     * GET /api/fitness/today/{userId}
+     */
+    @GET("api/fitness/today/{userId}")
+    suspend fun getTodayFitness(
+        @Path("userId") userId: String,
         @Header("Authorization") token: String
-    ): Response<Unit>
-
-
-    // ==================== Stats Service Endpoints ====================
+    ): Response<FitnessData>
 
     /**
-     * Get daily stats history
-     * @param limit Number of days to retrieve (default: 5)
+     * Get fitness stats (week/month/year)
+     * GET /api/fitness/stats/{userId}/{range}
      */
-    @GET("api/stats")
-    suspend fun getDailyStats(
-        @Header("Authorization") token: String,
-        @Query("limit") limit: Int = 5
-    ): Response<List<DailyStats>>
-
-    /**
-     * Get today's stats
-     */
-    @GET("api/stats/today")
-    suspend fun getTodayStats(
+    @GET("api/fitness/stats/{userId}/{range}")
+    suspend fun getStats(
+        @Path("userId") userId: String,
+        @Path("range") range: String,
         @Header("Authorization") token: String
-    ): Response<DailyStats>
+    ): Response<FitnessStatsResponse>
 
     /**
-     * Log daily stats
+     * Get fitness summary
+     * GET /api/fitness/summary/{userId}
      */
-    @POST("api/stats")
-    suspend fun logDailyStats(
-        @Header("Authorization") token: String,
-        @Body stats: DailyStats
-    ): Response<DailyStats>
-
-
-    // ==================== Workout Service Endpoints ====================
-
-    /**
-     * Get all workouts for the user
-     */
-    @GET("api/workouts")
-    suspend fun getWorkouts(
+    @GET("api/fitness/summary/{userId}")
+    suspend fun getSummary(
+        @Path("userId") userId: String,
         @Header("Authorization") token: String
-    ): Response<List<Workout>>
+    ): Response<SummaryResponse>
+
+
+    // ==================== BLOCKCHAIN ROUTES ====================
 
     /**
-     * Get a specific workout by ID
+     * Get user rewards
+     * GET /api/blockchain/rewards/{address}
      */
-    @GET("api/workouts/{id}")
-    suspend fun getWorkoutById(
-        @Header("Authorization") token: String,
-        @Path("id") workoutId: String
-    ): Response<Workout>
+    @GET("api/blockchain/rewards/{address}")
+    suspend fun getRewards(
+        @Path("address") address: String
+    ): Response<RewardsResponse>
 
     /**
-     * Log a new workout
+     * Award rewards
+     * POST /api/blockchain/rewards
      */
-    @POST("api/workouts")
-    suspend fun logWorkout(
-        @Header("Authorization") token: String,
-        @Body workout: CreateWorkoutRequest
-    ): Response<Workout>
-
-    /**
-     * Update a workout
-     */
-    @PUT("api/workouts/{id}")
-    suspend fun updateWorkout(
-        @Header("Authorization") token: String,
-        @Path("id") workoutId: String,
-        @Body workout: CreateWorkoutRequest
-    ): Response<Workout>
-
-    /**
-     * Delete a workout
-     */
-    @DELETE("api/workouts/{id}")
-    suspend fun deleteWorkout(
-        @Header("Authorization") token: String,
-        @Path("id") workoutId: String
-    ): Response<Unit>
-
-
-    // ==================== Goal Service Endpoints ====================
-
-    /**
-     * Get all goals for the user
-     */
-    @GET("api/goals")
-    suspend fun getGoals(
-        @Header("Authorization") token: String
-    ): Response<List<Goal>>
-
-    /**
-     * Get a specific goal by ID
-     */
-    @GET("api/goals/{id}")
-    suspend fun getGoalById(
-        @Header("Authorization") token: String,
-        @Path("id") goalId: String
-    ): Response<Goal>
-
-    /**
-     * Create a new goal
-     */
-    @POST("api/goals")
-    suspend fun createGoal(
-        @Header("Authorization") token: String,
-        @Body goal: CreateGoalRequest
-    ): Response<Goal>
-
-    /**
-     * Update goal progress
-     */
-    @PUT("api/goals/{id}")
-    suspend fun updateGoal(
-        @Header("Authorization") token: String,
-        @Path("id") goalId: String,
-        @Body goal: UpdateGoalRequest
-    ): Response<Goal>
-
-    /**
-     * Delete a goal
-     */
-    @DELETE("api/goals/{id}")
-    suspend fun deleteGoal(
-        @Header("Authorization") token: String,
-        @Path("id") goalId: String
-    ): Response<Unit>
-
-
-    // ==================== Blockchain Service Endpoints ====================
-
-    /**
-     * Get user's token balance
-     */
-    @GET("api/blockchain/balance")
-    suspend fun getTokenBalance(
-        @Header("Authorization") token: String
-    ): Response<TokenBalance>
-
-    /**
-     * Get transaction history
-     */
-    @GET("api/blockchain/transactions")
-    suspend fun getTransactions(
-        @Header("Authorization") token: String
-    ): Response<List<TokenTransaction>>
-
-    /**
-     * Award tokens for completing activities (usually called by backend)
-     */
-    @POST("api/blockchain/reward")
-    suspend fun awardTokens(
-        @Header("Authorization") token: String,
-        @Body request: Map<String, Any>
+    @POST("api/blockchain/rewards")
+    suspend fun awardRewards(
+        @Body request: AwardRewardsRequest
     ): Response<RewardResponse>
+
+
+    // ==================== HEALTH CHECK ====================
+
+    /**
+     * Health check
+     * GET /health
+     */
+    @GET("health")
+    suspend fun healthCheck(): Response<Map<String, Any>>
 }
 

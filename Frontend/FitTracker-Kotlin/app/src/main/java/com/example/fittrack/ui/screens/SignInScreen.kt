@@ -31,6 +31,7 @@ fun SignInScreen(
     onSignUpClick: () -> Unit,
     onForgotPasswordClick: () -> Unit
 ) {
+    val context = androidx.compose.ui.platform.LocalContext.current
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
@@ -206,7 +207,7 @@ fun SignInScreen(
                     Button(
                         onClick = {
                             errorMessage = null
-                            authViewModel.signIn(email, password)
+                            authViewModel.signIn(email, password, context)
                         },
                         modifier = Modifier
                             .fillMaxWidth()
