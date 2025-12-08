@@ -14,6 +14,21 @@ mongoose.connect(process.env.MONGODB_FITNESS_URI || 'mongodb://localhost:27017/f
   .then(() => console.log('✅ Fitness Service: MongoDB connected'))
   .catch(err => console.error('❌ MongoDB connection error:', err));
 
+// Timezone helper for Cambodia (GMT+7)
+const CAMBODIA_TIMEZONE_OFFSET = 7; // GMT+7
+
+function getCambodiaDate() {
+  const utcNow = new Date();
+  // Convert UTC to Cambodia time (GMT+7)
+  const cambodiaTime = new Date(utcNow.getTime() + (CAMBODIA_TIMEZONE_OFFSET * 60 * 60 * 1000));
+  return cambodiaTime;
+}
+
+function getCambodiaDateOnly() {
+  const cambodiaTime = getCambodiaDate();
+  return new Date(cambodiaTime.getFullYear(), cambodiaTime.getMonth(), cambodiaTime.getDate(), 0, 0, 0, 0);
+}
+
 // Fitness Data Schema
 const fitnessDataSchema = new mongoose.Schema({
   userId: { type: String, required: true, index: true },
@@ -53,10 +68,9 @@ app.get('/health', (req, res) => {
 app.get('/fitness/today/:userId', verifyToken, async (req, res) => {
   try {
     const { userId } = req.params;
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
+    // Use Cambodia timezone (GMT+7)
+    const today = getCambodiaDateOnly();
+    const tomorrow = new Date(today.getTime() + 86400000);
 
     const data = await FitnessData.findOne({
       userId,
@@ -74,21 +88,27 @@ app.get('/fitness/today/:userId', verifyToken, async (req, res) => {
 app.get('/fitness/stats/:userId/:range', verifyToken, async (req, res) => {
   try {
     const { userId, range } = req.params;
-    let startDate = new Date();
+    
+    // Calculate date range using Cambodia timezone (GMT+7)
+    const today = getCambodiaDateOnly();
+    let startDate;
 
-    // Calculate date range
     switch (range) {
       case 'week':
-        startDate.setDate(startDate.getDate() - 7);
+        // 7 days ago in Cambodia timezone
+        startDate = new Date(today.getTime() - (7 * 86400000));
         break;
       case 'month':
-        startDate.setMonth(startDate.getMonth() - 1);
+        // 30 days ago in Cambodia timezone
+        startDate = new Date(today.getTime() - (30 * 86400000));
         break;
       case 'year':
-        startDate.setFullYear(startDate.getFullYear() - 1);
+        // 365 days ago in Cambodia timezone
+        startDate = new Date(today.getTime() - (365 * 86400000));
         break;
       default:
-        startDate.setDate(startDate.getDate() - 7); // Default to week
+        // Default to week
+        startDate = new Date(today.getTime() - (7 * 86400000));
     }
 
     const data = await FitnessData.find({
@@ -134,10 +154,12 @@ app.post('/fitness/log', verifyToken, async (req, res) => {
     }
 
     // Check if entry already exists for this date
-    const startOfDay = new Date(date);
-    startOfDay.setHours(0, 0, 0, 0);
-    const endOfDay = new Date(startOfDay);
-    endOfDay.setDate(endOfDay.getDate() + 1);
+    // Handle timezone properly - use Cambodia timezone (GMT+7) not UTC
+    const inputDate = new Date(date);
+    // Convert to Cambodia time by adding 7 hours
+    const cambodiaInputDate = new Date(inputDate.getTime() + (CAMBODIA_TIMEZONE_OFFSET * 60 * 60 * 1000));
+    const startOfDay = new Date(cambodiaInputDate.getFullYear(), cambodiaInputDate.getMonth(), cambodiaInputDate.getDate(), 0, 0, 0, 0);
+    const endOfDay = new Date(cambodiaInputDate.getFullYear(), cambodiaInputDate.getMonth(), cambodiaInputDate.getDate() + 1, 0, 0, 0, 0);
 
     let fitnessData = await FitnessData.findOne({
       userId,

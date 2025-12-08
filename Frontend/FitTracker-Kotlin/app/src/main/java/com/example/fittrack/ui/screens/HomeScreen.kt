@@ -49,32 +49,45 @@ fun HomeScreen(
     val fitnessViewModel: FitnessViewModel = remember { FitnessViewModel(context) }
     val scope = rememberCoroutineScope()
 
-    // Get userId from Firebase
-    val userId = remember { com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid ?: "" }
+    // Get userId from Firebase - NOT cached, updates when auth changes
+    val userId = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid ?: ""
 
     var selectedTab by remember { mutableStateOf(0) }
     var selectedDate by remember { mutableStateOf(0) }
     var profileScreenState by remember { mutableStateOf(ProfileScreen.MAIN) }
 
-    // Real-time step counter state
-    var realTimeSteps by remember { mutableStateOf(0) }
-    var realTimeStats by remember { mutableStateOf<DailyStats?>(null) }
+    // Real-time step counter state - will reset when userId changes
+    var realTimeSteps by remember(userId) { mutableStateOf(0) }
+    var realTimeStats by remember(userId) { mutableStateOf<DailyStats?>(null) }
     var isSyncing by remember { mutableStateOf(false) }
 
     // Fetch data from backend API
     val dailyStatsState by fitnessViewModel.dailyStatsState.collectAsState()
 
     // Start step counter service and update real-time steps
-    LaunchedEffect(Unit) {
+    // Restart when userId changes (account switch)
+    LaunchedEffect(userId) {
+        android.util.Log.d("HomeScreen", "🔄 User changed or logged in: $userId")
+        android.util.Log.d("HomeScreen", "📊 Resetting real-time steps to 0 for new user")
+
+        // Reset steps immediately for new user
+        realTimeSteps = 0
+        realTimeStats = null
+
+        // Restart step counter service for new user
+        StepCounterService.stop(context)
         StepCounterService.start(context)
+
+        // Fetch backend data for this user
         fitnessViewModel.getDailyStats(limit = 5)
 
+        // Update real-time steps every second
         while (true) {
+            delay(1000)
             realTimeSteps = StepCounterHelper.getCurrentSteps(context)
             realTimeStats = if (userId.isNotEmpty()) {
                 StepCounterHelper.getCurrentDailyStats(context, userId)
             } else null
-            delay(1000)
         }
     }
 
