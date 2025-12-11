@@ -18,11 +18,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.example.fittrack.ui.theme.LocalThemeManager
 import com.example.fittrack.ui.theme.getAppColors
 import com.example.fittrack.data.model.DailyStats
-import java.text.SimpleDateFormat
+import com.example.fittrack.util.DateUtils
+import com.example.fittrack.ui.theme.ResponsiveDimens
 import java.util.*
 
 @Composable
@@ -35,22 +35,42 @@ fun StatsScreen(
     val colors = getAppColors(themeManager.isDarkMode)
     val currentStats = fitnessData[selectedDate]
 
+    // Debug logging to see what data StatsScreen receives
+    LaunchedEffect(fitnessData) {
+        android.util.Log.d("StatsScreen", "")
+        android.util.Log.d("StatsScreen", "========================================")
+        android.util.Log.d("StatsScreen", "📊 STATSSCREEN DATA RECEIVED")
+        android.util.Log.d("StatsScreen", "========================================")
+        android.util.Log.d("StatsScreen", "Total days of data: ${fitnessData.size}")
+        fitnessData.forEachIndexed { index, stats ->
+            val isToday = DateUtils.extractDateFromIso(stats.date) == DateUtils.getCurrentDate()
+            val displayDate = DateUtils.extractDateFromIso(stats.date)
+            android.util.Log.d("StatsScreen", "[$index] Date: $displayDate (${if (isToday) "TODAY" else "PAST"}) - Steps: ${stats.steps}, Cal: ${stats.calories}, Dist: %.2f km".format(stats.distance))
+        }
+        android.util.Log.d("StatsScreen", "Currently selected index: $selectedDate")
+        if (fitnessData.isNotEmpty() && selectedDate < fitnessData.size) {
+            android.util.Log.d("StatsScreen", "Displaying: ${DateUtils.extractDateFromIso(fitnessData[selectedDate].date)} with ${fitnessData[selectedDate].steps} steps")
+        }
+        android.util.Log.d("StatsScreen", "========================================")
+        android.util.Log.d("StatsScreen", "")
+    }
+
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
             .statusBarsPadding()
-            .padding(16.dp)
-            .padding(bottom = 70.dp),
-        verticalArrangement = Arrangement.spacedBy(20.dp)
+            .padding(horizontal = ResponsiveDimens.horizontalPadding())
+            .padding(bottom = 75.dp),
+        verticalArrangement = Arrangement.spacedBy(ResponsiveDimens.spacingMedium())
     ) {
         // Stats Header
         item {
             Text(
                 text = "Statistics",
-                fontSize = 28.sp,
+                fontSize = ResponsiveDimens.textSizeHeading(),
                 fontWeight = FontWeight.Bold,
                 color = colors.textPrimary,
-                modifier = Modifier.padding(bottom = 8.dp)
+                modifier = Modifier.padding(vertical = ResponsiveDimens.spacingSmall())
             )
         }
 
@@ -59,27 +79,29 @@ fun StatsScreen(
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.cardColors(containerColor = colors.cardBackground),
-                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+                elevation = CardDefaults.cardElevation(defaultElevation = ResponsiveDimens.cardElevation())
             ) {
                 Column(
-                    modifier = Modifier.padding(12.dp)
+                    modifier = Modifier.padding(ResponsiveDimens.cardPadding())
                 ) {
                     Text(
                         text = "Select Date",
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = colors.textPrimary,
-                        modifier = Modifier.padding(bottom = 10.dp)
+                        fontSize = ResponsiveDimens.textSizeSubtitle(),
+                        fontWeight = FontWeight.Bold,
+                        color = colors.textPrimary
                     )
 
+                    Spacer(modifier = Modifier.height(ResponsiveDimens.spacingMedium()))
+
                     LazyRow(
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        horizontalArrangement = Arrangement.spacedBy(ResponsiveDimens.spacingSmall())
                     ) {
                         items(fitnessData.size) { index ->
+                            val stats = fitnessData[index]
                             DateCard(
-                                date = fitnessData[index].date,
-                                isSelected = selectedDate == index,
-                                isToday = index == 0,
+                                date = stats.date,
+                                isSelected = index == selectedDate,
+                                isToday = DateUtils.extractDateFromIso(stats.date) == DateUtils.getCurrentDate(),
                                 onClick = { onDateSelected(index) },
                                 appColors = colors
                             )
@@ -91,7 +113,17 @@ fun StatsScreen(
 
         // Main Stats Cards
         item {
-            // Steps Card (full width)
+            Text(
+                text = "Daily Activity",
+                fontSize = ResponsiveDimens.textSizeSubtitle(),
+                fontWeight = FontWeight.Bold,
+                color = colors.textPrimary,
+                modifier = Modifier.padding(vertical = ResponsiveDimens.spacingSmall())
+            )
+        }
+
+        // Steps Card
+        item {
             StatCard(
                 modifier = Modifier.fillMaxWidth(),
                 icon = Icons.AutoMirrored.Filled.DirectionsWalk,
@@ -99,17 +131,16 @@ fun StatsScreen(
                 value = "${currentStats.steps}",
                 subtitle = "Total steps",
                 progress = currentStats.steps / 10000f,
-                color = colors.primary,
-                showProgress = false,
+                color = Color(0xFF3B82F6),
                 appColors = colors
             )
         }
 
+        // Calories and Distance Row
         item {
-            // Calories and Distance Cards (side by side)
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                horizontalArrangement = Arrangement.spacedBy(ResponsiveDimens.spacingMedium())
             ) {
                 // Calories Card
                 StatCard(
@@ -129,7 +160,7 @@ fun StatsScreen(
                     modifier = Modifier.weight(1f),
                     icon = Icons.Default.Route,
                     title = "Distance",
-                    value = "${currentStats.distance} km",
+                    value = String.format(Locale.US, "%.2f km", currentStats.distance),
                     subtitle = "Total walked",
                     progress = currentStats.distance / 12f,
                     color = Color(0xFF38A169),
@@ -149,35 +180,57 @@ fun DateCard(
     onClick: () -> Unit,
     appColors: com.example.fittrack.ui.theme.AppColors
 ) {
+    val displayDate = DateUtils.extractDateFromIso(date)
+    val todayDate = DateUtils.getCurrentDate()
+
+    val bangkokTimezone = TimeZone.getTimeZone("Asia/Bangkok")
+    val yesterday = Calendar.getInstance(bangkokTimezone).apply {
+        add(Calendar.DAY_OF_YEAR, -1)
+    }
+    val dateFormat = java.text.SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).apply {
+        timeZone = bangkokTimezone
+    }
+    val yesterdayDate = dateFormat.format(yesterday.time)
+
     val displayText = when {
-        isToday -> "Today"
-        date == SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(
-            Calendar.getInstance().apply { add(Calendar.DAY_OF_YEAR, -1) }.time
-        ) -> "Yesterday"
-        else -> SimpleDateFormat("MMM dd", Locale.getDefault()).format(
-            SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).parse(date) ?: Date()
-        )
+        displayDate == todayDate -> "Today"
+        displayDate == yesterdayDate -> "Yesterday"
+        else -> displayDate
     }
 
     Card(
         modifier = Modifier
-            .clickable { onClick() }
-            .padding(2.dp),
+            .clickable(onClick = onClick)
+            .padding(ResponsiveDimens.spacingSmall() * 0.5f),
         colors = CardDefaults.cardColors(
             containerColor = if (isSelected) appColors.primary else appColors.cardBackground
         ),
         elevation = CardDefaults.cardElevation(
-            defaultElevation = if (isSelected) 6.dp else 2.dp
-        ),
-        shape = RoundedCornerShape(10.dp)
-    ) {
-        Text(
-            text = displayText,
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-            color = if (isSelected) Color.White else appColors.textPrimary,
-            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-            fontSize = 12.sp
+            defaultElevation = if (isSelected) 8.dp else ResponsiveDimens.cardElevation()
         )
+    ) {
+        Column(
+            modifier = Modifier
+                .padding(ResponsiveDimens.cardPadding())
+                .widthIn(min = 80.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = displayText,
+                fontSize = ResponsiveDimens.textSizeBody(),
+                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                color = if (isSelected) Color.White else appColors.textPrimary
+            )
+
+            if (isToday && !isSelected) {
+                Box(
+                    modifier = Modifier
+                        .padding(top = 4.dp)
+                        .size(6.dp)
+                        .background(appColors.primary, CircleShape)
+                )
+            }
+        }
     }
 }
 
@@ -196,18 +249,18 @@ fun StatCard(
     Card(
         modifier = modifier,
         colors = CardDefaults.cardColors(containerColor = appColors.cardBackground),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = ResponsiveDimens.cardElevation())
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
+                .padding(ResponsiveDimens.cardPadding()),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
             Box(
                 modifier = Modifier
-                    .size(48.dp)
+                    .size(ResponsiveDimens.iconBoxSize())
                     .background(color.copy(alpha = 0.1f), CircleShape),
                 contentAlignment = Alignment.Center
             ) {
@@ -215,53 +268,33 @@ fun StatCard(
                     icon,
                     contentDescription = title,
                     tint = color,
-                    modifier = Modifier.size(24.dp)
+                    modifier = Modifier.size(ResponsiveDimens.iconSizeMedium())
                 )
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(ResponsiveDimens.spacingMedium()))
 
             Text(
                 text = value,
-                fontSize = 20.sp,
+                fontSize = ResponsiveDimens.textSizeTitle(),
                 fontWeight = FontWeight.Bold,
                 color = appColors.textPrimary
             )
 
-            Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.height(ResponsiveDimens.spacingSmall()))
 
             Text(
                 text = title,
-                fontSize = 13.sp,
+                fontSize = ResponsiveDimens.textSizeBody(),
                 color = appColors.textSecondary,
                 fontWeight = FontWeight.Medium
             )
 
             Text(
                 text = subtitle,
-                fontSize = 11.sp,
+                fontSize = ResponsiveDimens.textSizeSmall(),
                 color = appColors.textSecondary
             )
-
-            // Only show progress bar if showProgress is true
-            if (showProgress) {
-                Spacer(modifier = Modifier.height(10.dp))
-
-                // Progress bar
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(5.dp)
-                        .background(color.copy(alpha = 0.2f), RoundedCornerShape(2.5.dp))
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth(progress.coerceIn(0f, 1f))
-                            .height(5.dp)
-                            .background(color, RoundedCornerShape(2.5.dp))
-                    )
-                }
-            }
         }
     }
 }
@@ -277,14 +310,15 @@ fun WeeklyStatItem(
     ) {
         Text(
             text = value,
-            fontSize = 14.sp,
+            fontSize = ResponsiveDimens.textSizeBody(),
             fontWeight = FontWeight.Bold,
             color = colors.textPrimary
         )
         Text(
             text = title,
-            fontSize = 11.sp,
+            fontSize = ResponsiveDimens.textSizeSmall(),
             color = colors.textSecondary
         )
     }
 }
+

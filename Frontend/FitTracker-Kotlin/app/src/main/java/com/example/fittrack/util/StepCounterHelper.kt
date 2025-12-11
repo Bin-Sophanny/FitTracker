@@ -3,8 +3,6 @@ package com.example.fittrack.util
 import android.content.Context
 import com.example.fittrack.data.model.DailyStats
 import com.google.firebase.auth.FirebaseAuth
-import java.text.SimpleDateFormat
-import java.util.*
 
 /**
  * Helper class to read current step count from SharedPreferences
@@ -27,10 +25,10 @@ object StepCounterHelper {
 
     fun getCurrentSteps(context: Context): Int {
         val prefs = context.getSharedPreferences(getPrefsName(), Context.MODE_PRIVATE)
-        val lastDate = prefs.getString(KEY_LAST_SYNC_DATE, getCurrentDate()) ?: getCurrentDate()
+        val lastDate = prefs.getString(KEY_LAST_SYNC_DATE, DateUtils.getCurrentDate()) ?: DateUtils.getCurrentDate()
 
         // If date has changed, return 0
-        if (lastDate != getCurrentDate()) {
+        if (lastDate != DateUtils.getCurrentDate()) {
             return 0
         }
 
@@ -41,12 +39,11 @@ object StepCounterHelper {
         val steps = getCurrentSteps(context)
         return DailyStats(
             userId = userId,
-            date = getCurrentDate(),
+            date = DateUtils.getCurrentDate(),
             steps = steps,
             calories = estimateCalories(steps),
             distance = estimateDistance(steps),
-            activeMinutes = estimateActiveMinutes(steps),
-            heartRate = null
+            activeMinutes = estimateActiveMinutes(steps)
         )
     }
 
@@ -62,9 +59,6 @@ object StepCounterHelper {
         return steps / 100
     }
 
-    private fun getCurrentDate(): String {
-        return SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
-    }
 
     /**
      * Register a listener to be notified when steps change

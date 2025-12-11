@@ -2,8 +2,10 @@ package com.example.fittrack.ui.screens
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Lock
@@ -14,10 +16,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.fittrack.auth.AuthState
@@ -36,6 +41,65 @@ fun SignInScreen(
     var password by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
+
+    // Responsive sizing based on screen width
+    val screenWidth = LocalConfiguration.current.screenWidthDp.dp
+    val isSmallScreen = screenWidth < 360.dp
+    val isMediumScreen = screenWidth in 360.dp..599.dp
+
+    val horizontalPadding: Dp = when {
+        isSmallScreen -> 12.dp
+        isMediumScreen -> 16.dp
+        else -> 24.dp
+    }
+
+    val iconSize: Dp = when {
+        isSmallScreen -> 48.dp
+        isMediumScreen -> 60.dp
+        else -> 72.dp
+    }
+
+    val titleSize: TextUnit = when {
+        isSmallScreen -> 24.sp
+        isMediumScreen -> 32.sp
+        else -> 36.sp
+    }
+
+    val subtitleSize: TextUnit = when {
+        isSmallScreen -> 12.sp
+        isMediumScreen -> 14.sp
+        else -> 16.sp
+    }
+
+    val headingSize: TextUnit = when {
+        isSmallScreen -> 18.sp
+        isMediumScreen -> 22.sp
+        else -> 24.sp
+    }
+
+    val bodySize: TextUnit = when {
+        isSmallScreen -> 13.sp
+        isMediumScreen -> 14.sp
+        else -> 16.sp
+    }
+
+    val cardPadding: Dp = when {
+        isSmallScreen -> 16.dp
+        isMediumScreen -> 20.dp
+        else -> 24.dp
+    }
+
+    val spacing: Dp = when {
+        isSmallScreen -> 8.dp
+        isMediumScreen -> 12.dp
+        else -> 16.dp
+    }
+
+    val buttonHeight: Dp = when {
+        isSmallScreen -> 48.dp
+        isMediumScreen -> 50.dp
+        else -> 56.dp
+    }
 
     // Handle auth state changes
     LaunchedEffect(authState) {
@@ -60,8 +124,9 @@ fun SignInScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = 16.dp)
-                .padding(top = 8.dp, bottom = 8.dp)
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = horizontalPadding)
+                .padding(top = spacing, bottom = spacing)
                 .imePadding(),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
@@ -72,24 +137,24 @@ fun SignInScreen(
                 contentDescription = "FitTracker App Icon",
                 tint = Color.White,
                 modifier = Modifier
-                    .size(60.dp)
-                    .padding(bottom = 8.dp)
+                    .size(iconSize)
+                    .padding(bottom = spacing)
             )
 
             // App Title
             Text(
                 text = "FitTracker",
-                fontSize = 32.sp,
+                fontSize = titleSize,
                 fontWeight = FontWeight.Bold,
                 color = Color.White,
-                modifier = Modifier.padding(bottom = 8.dp)
+                modifier = Modifier.padding(bottom = spacing / 2)
             )
 
             Text(
                 text = "Transform Your Fitness Journey",
-                fontSize = 14.sp,
+                fontSize = subtitleSize,
                 color = Color.White.copy(alpha = 0.8f),
-                modifier = Modifier.padding(bottom = 24.dp)
+                modifier = Modifier.padding(bottom = spacing * 2)
             )
 
             // Login Card
@@ -103,15 +168,15 @@ fun SignInScreen(
                 elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
             ) {
                 Column(
-                    modifier = Modifier.padding(20.dp),
+                    modifier = Modifier.padding(cardPadding),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
                         text = "Welcome Back!",
-                        fontSize = 22.sp,
+                        fontSize = headingSize,
                         fontWeight = FontWeight.Bold,
                         color = Color(0xFF2D3748),
-                        modifier = Modifier.padding(bottom = 12.dp)
+                        modifier = Modifier.padding(bottom = spacing)
                     )
 
                     // Error message
@@ -119,7 +184,7 @@ fun SignInScreen(
                         Card(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(bottom = 16.dp),
+                                .padding(bottom = spacing),
                             colors = CardDefaults.cardColors(
                                 containerColor = Color(0xFFFEE2E2)
                             )
@@ -127,8 +192,8 @@ fun SignInScreen(
                             Text(
                                 text = errorMessage ?: "",
                                 color = Color(0xFFDC2626),
-                                fontSize = 14.sp,
-                                modifier = Modifier.padding(12.dp)
+                                fontSize = bodySize,
+                                modifier = Modifier.padding(spacing)
                             )
                         }
                     }
@@ -137,7 +202,7 @@ fun SignInScreen(
                     OutlinedTextField(
                         value = email,
                         onValueChange = { email = it },
-                        label = { Text("Email Address") },
+                        label = { Text("Email Address", fontSize = bodySize) },
                         leadingIcon = {
                             Icon(
                                 Icons.Default.Email,
@@ -148,7 +213,7 @@ fun SignInScreen(
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(bottom = 12.dp),
+                            .padding(bottom = spacing),
                         shape = RoundedCornerShape(12.dp),
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedBorderColor = Color(0xFF667eea),
@@ -160,7 +225,7 @@ fun SignInScreen(
                     OutlinedTextField(
                         value = password,
                         onValueChange = { password = it },
-                        label = { Text("Password") },
+                        label = { Text("Password", fontSize = bodySize) },
                         leadingIcon = {
                             Icon(
                                 Icons.Default.Lock,
@@ -173,7 +238,7 @@ fun SignInScreen(
                                 Text(
                                     if (passwordVisible) "Hide" else "Show",
                                     color = Color(0xFF667eea),
-                                    fontSize = 12.sp
+                                    fontSize = subtitleSize
                                 )
                             }
                         },
@@ -181,7 +246,7 @@ fun SignInScreen(
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(bottom = 4.dp),
+                            .padding(bottom = spacing / 2),
                         shape = RoundedCornerShape(12.dp),
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedBorderColor = Color(0xFF667eea),
@@ -197,11 +262,12 @@ fun SignInScreen(
                         Text(
                             "Forgot Password?",
                             color = Color(0xFF667eea),
-                            fontWeight = FontWeight.Medium
+                            fontWeight = FontWeight.Medium,
+                            fontSize = bodySize
                         )
                     }
 
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(spacing))
 
                     // Sign In Button
                     Button(
@@ -211,7 +277,7 @@ fun SignInScreen(
                         },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(50.dp),
+                            .height(buttonHeight),
                         enabled = email.isNotEmpty() && password.isNotEmpty() && authState !is AuthState.Loading,
                         shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.buttonColors(
@@ -226,13 +292,13 @@ fun SignInScreen(
                         } else {
                             Text(
                                 "Sign In",
-                                fontSize = 18.sp,
+                                fontSize = headingSize * 0.8f,
                                 fontWeight = FontWeight.Bold
                             )
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(spacing))
 
                     // Sign Up Link
                     Row(
@@ -241,13 +307,15 @@ fun SignInScreen(
                     ) {
                         Text(
                             "Don't have an account? ",
-                            color = Color(0xFF718096)
+                            color = Color(0xFF718096),
+                            fontSize = bodySize
                         )
                         TextButton(onClick = onSignUpClick) {
                             Text(
                                 "Sign Up",
                                 color = Color(0xFF667eea),
-                                fontWeight = FontWeight.Bold
+                                fontWeight = FontWeight.Bold,
+                                fontSize = bodySize
                             )
                         }
                     }

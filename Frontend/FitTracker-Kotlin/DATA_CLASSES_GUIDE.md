@@ -10,7 +10,6 @@ com.example.fittrack/
 │   │   ├── UserProfile.kt
 │   │   ├── Workout.kt
 │   │   ├── Goal.kt
-│   │   ├── Blockchain.kt
 │   │   └── AI.kt
 │   ├── api/                # API configuration
 │   │   ├── ApiService.kt
@@ -72,12 +71,12 @@ data class Goal(
 )
 ```
 
-### 5. **TokenBalance** - Blockchain Rewards
+### 5. **AI** - AI Predictions & Recommendations
 ```kotlin
-data class TokenBalance(
-    val balance: Int,
-    val totalEarned: Int,
-    val transactions: List<TokenTransaction>
+data class AIPrediction(
+    val predictedCalories: Int,
+    val recommendedWorkout: String,
+    val motivationalMessage: String
 )
 ```
 

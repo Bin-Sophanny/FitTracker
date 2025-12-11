@@ -16,10 +16,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.example.fittrack.ui.theme.LocalThemeManager
 import com.example.fittrack.ui.theme.getAppColors
 import com.example.fittrack.data.model.DailyStats
+import com.example.fittrack.ui.theme.ResponsiveDimens
 
 @Composable
 fun MainScreen(
@@ -35,13 +35,13 @@ fun MainScreen(
         modifier = Modifier
             .fillMaxSize()
             .statusBarsPadding()
-            .padding(12.dp)
-            .padding(bottom = 60.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+            .padding(horizontal = ResponsiveDimens.horizontalPadding())
+            .padding(bottom = 70.dp),
+        verticalArrangement = Arrangement.spacedBy(ResponsiveDimens.spacingMedium())
     ) {
-        // Header with user greeting, profile avatar, and sync button
+        // Header with user greeting, profile avatar
         item {
-            Column {
+            Column(modifier = Modifier.padding(vertical = ResponsiveDimens.spacingSmall())) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -50,13 +50,14 @@ fun MainScreen(
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = "Hello, $userName! 👋",
-                            fontSize = 22.sp,
+                            fontSize = ResponsiveDimens.textSizeTitle(),
                             fontWeight = FontWeight.Bold,
-                            color = colors.textPrimary
+                            color = colors.textPrimary,
+                            maxLines = 1
                         )
                         Text(
                             text = "Today's Activity",
-                            fontSize = 14.sp,
+                            fontSize = ResponsiveDimens.textSizeBody(),
                             color = colors.textSecondary,
                             fontWeight = FontWeight.Medium
                         )
@@ -64,46 +65,16 @@ fun MainScreen(
 
                     Box(
                         modifier = Modifier
-                            .size(42.dp)
+                            .size(ResponsiveDimens.avatarSizeSmall())
                             .background(colors.primary, CircleShape),
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
                             text = userName.take(1).uppercase(),
-                            fontSize = 18.sp,
+                            fontSize = ResponsiveDimens.textSizeSubtitle(),
                             fontWeight = FontWeight.Bold,
                             color = Color.White
                         )
-                    }
-                }
-
-                // Manual Sync Button
-                Spacer(modifier = Modifier.height(12.dp))
-                Button(
-                    onClick = onManualSync,
-                    modifier = Modifier.fillMaxWidth().height(48.dp),
-                    enabled = !isSyncing,
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = colors.primary
-                    ),
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    if (isSyncing) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(20.dp),
-                            color = Color.White,
-                            strokeWidth = 2.dp
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Syncing to Backend...", fontSize = 14.sp)
-                    } else {
-                        Icon(
-                            Icons.Default.CloudUpload,
-                            contentDescription = "Sync",
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Sync Steps to Backend Now", fontSize = 14.sp, fontWeight = FontWeight.Bold)
                     }
                 }
             }
@@ -129,7 +100,7 @@ fun MainScreen(
             // Calories and Distance Cards (side by side, full width combined)
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                horizontalArrangement = Arrangement.spacedBy(ResponsiveDimens.spacingMedium())
             ) {
                 // Calories Card
                 MainStatCard(
@@ -149,7 +120,7 @@ fun MainScreen(
                     modifier = Modifier.weight(1f),
                     icon = Icons.Default.Route,
                     title = "Distance",
-                    value = "${fitnessData[0].distance} km",
+                    value = String.format(java.util.Locale.US, "%.2f km", fitnessData[0].distance),
                     subtitle = "Total walked",
                     progress = fitnessData[0].distance / 12f,
                     color = Color(0xFF38A169),
@@ -181,13 +152,19 @@ fun MainStatCard(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(if (showProgress) 24.dp else 16.dp),
+                .padding(
+                    if (showProgress) ResponsiveDimens.cardPaddingLarge()
+                    else ResponsiveDimens.cardPadding()
+                ),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
             Box(
                 modifier = Modifier
-                    .size(if (showProgress) 64.dp else 48.dp)
+                    .size(
+                        if (showProgress) ResponsiveDimens.iconBoxSizeLarge()
+                        else ResponsiveDimens.iconBoxSize()
+                    )
                     .background(color.copy(alpha = 0.1f), CircleShape),
                 contentAlignment = Alignment.Center
             ) {
@@ -195,37 +172,43 @@ fun MainStatCard(
                     icon,
                     contentDescription = title,
                     tint = color,
-                    modifier = Modifier.size(if (showProgress) 32.dp else 24.dp)
+                    modifier = Modifier.size(
+                        if (showProgress) ResponsiveDimens.iconSizeMedium()
+                        else ResponsiveDimens.iconSizeSmall()
+                    )
                 )
             }
 
-            Spacer(modifier = Modifier.height(if (showProgress) 16.dp else 12.dp))
+            Spacer(modifier = Modifier.height(
+                if (showProgress) ResponsiveDimens.spacingMedium()
+                else ResponsiveDimens.spacingSmall()
+            ))
 
             Text(
                 text = value,
-                fontSize = if (showProgress) 28.sp else 20.sp,
+                fontSize = if (showProgress) ResponsiveDimens.textSizeTitle() else ResponsiveDimens.textSizeSubtitle(),
                 fontWeight = FontWeight.Bold,
                 color = appColors.textPrimary
             )
 
-            Spacer(modifier = Modifier.height(if (showProgress) 6.dp else 4.dp))
+            Spacer(modifier = Modifier.height(ResponsiveDimens.spacingSmall()))
 
             Text(
                 text = title,
-                fontSize = if (showProgress) 16.sp else 13.sp,
+                fontSize = ResponsiveDimens.textSizeBody(),
                 color = appColors.textSecondary,
                 fontWeight = FontWeight.Medium
             )
 
             Text(
                 text = subtitle,
-                fontSize = if (showProgress) 12.sp else 11.sp,
+                fontSize = ResponsiveDimens.textSizeCaption(),
                 color = appColors.textSecondary
             )
 
             // Only show progress bar if showProgress is true
             if (showProgress) {
-                Spacer(modifier = Modifier.height(14.dp))
+                Spacer(modifier = Modifier.height(ResponsiveDimens.spacingMedium()))
 
                 // Progress bar
                 Box(
@@ -242,12 +225,12 @@ fun MainStatCard(
                     )
                 }
 
-                Spacer(modifier = Modifier.height(10.dp))
+                Spacer(modifier = Modifier.height(ResponsiveDimens.spacingSmall()))
 
                 // Progress percentage text
                 Text(
                     text = "${(progress * 100).toInt()}% of goal",
-                    fontSize = 12.sp,
+                    fontSize = ResponsiveDimens.textSizeCaption(),
                     color = appColors.textSecondary,
                     fontWeight = FontWeight.Medium
                 )

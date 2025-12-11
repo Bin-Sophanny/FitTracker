@@ -17,10 +17,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.fittrack.auth.AuthState
@@ -41,6 +44,65 @@ fun SignUpScreen(
     var passwordVisible by remember { mutableStateOf(false) }
     var confirmPasswordVisible by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
+
+    // Responsive sizing based on screen width
+    val screenWidth = LocalConfiguration.current.screenWidthDp.dp
+    val isSmallScreen = screenWidth < 360.dp
+    val isMediumScreen = screenWidth in 360.dp..599.dp
+
+    val horizontalPadding: Dp = when {
+        isSmallScreen -> 12.dp
+        isMediumScreen -> 16.dp
+        else -> 24.dp
+    }
+
+    val iconSize: Dp = when {
+        isSmallScreen -> 48.dp
+        isMediumScreen -> 60.dp
+        else -> 72.dp
+    }
+
+    val titleSize: TextUnit = when {
+        isSmallScreen -> 24.sp
+        isMediumScreen -> 32.sp
+        else -> 36.sp
+    }
+
+    val subtitleSize: TextUnit = when {
+        isSmallScreen -> 12.sp
+        isMediumScreen -> 14.sp
+        else -> 16.sp
+    }
+
+    val headingSize: TextUnit = when {
+        isSmallScreen -> 18.sp
+        isMediumScreen -> 22.sp
+        else -> 24.sp
+    }
+
+    val bodySize: TextUnit = when {
+        isSmallScreen -> 13.sp
+        isMediumScreen -> 14.sp
+        else -> 16.sp
+    }
+
+    val cardPadding: Dp = when {
+        isSmallScreen -> 16.dp
+        isMediumScreen -> 20.dp
+        else -> 24.dp
+    }
+
+    val spacing: Dp = when {
+        isSmallScreen -> 8.dp
+        isMediumScreen -> 12.dp
+        else -> 16.dp
+    }
+
+    val buttonHeight: Dp = when {
+        isSmallScreen -> 48.dp
+        isMediumScreen -> 50.dp
+        else -> 56.dp
+    }
 
     // Handle auth state changes
     LaunchedEffect(authState) {
@@ -66,8 +128,8 @@ fun SignUpScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp)
-                .padding(top = 8.dp, bottom = 8.dp)
+                .padding(horizontal = horizontalPadding)
+                .padding(top = spacing, bottom = spacing)
                 .imePadding(),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
@@ -78,24 +140,24 @@ fun SignUpScreen(
                 contentDescription = "FitTracker App Icon",
                 tint = Color.White,
                 modifier = Modifier
-                    .size(60.dp)
-                    .padding(bottom = 8.dp)
+                    .size(iconSize)
+                    .padding(bottom = spacing)
             )
 
             // App Title
             Text(
                 text = "FitTracker",
-                fontSize = 32.sp,
+                fontSize = titleSize,
                 fontWeight = FontWeight.Bold,
                 color = Color.White,
-                modifier = Modifier.padding(bottom = 8.dp)
+                modifier = Modifier.padding(bottom = spacing / 2)
             )
 
             Text(
                 text = "Start Your Fitness Journey",
-                fontSize = 14.sp,
+                fontSize = subtitleSize,
                 color = Color.White.copy(alpha = 0.8f),
-                modifier = Modifier.padding(bottom = 24.dp)
+                modifier = Modifier.padding(bottom = spacing * 2)
             )
 
             // Sign Up Card
@@ -109,15 +171,15 @@ fun SignUpScreen(
                 elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
             ) {
                 Column(
-                    modifier = Modifier.padding(20.dp),
+                    modifier = Modifier.padding(cardPadding),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
                         text = "Create Account",
-                        fontSize = 22.sp,
+                        fontSize = headingSize,
                         fontWeight = FontWeight.Bold,
                         color = Color(0xFF2D3748),
-                        modifier = Modifier.padding(bottom = 12.dp)
+                        modifier = Modifier.padding(bottom = spacing)
                     )
 
                     // Error message
@@ -125,7 +187,7 @@ fun SignUpScreen(
                         Card(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(bottom = 16.dp),
+                                .padding(bottom = spacing),
                             colors = CardDefaults.cardColors(
                                 containerColor = Color(0xFFFEE2E2)
                             )
@@ -133,8 +195,8 @@ fun SignUpScreen(
                             Text(
                                 text = errorMessage ?: "",
                                 color = Color(0xFFDC2626),
-                                fontSize = 14.sp,
-                                modifier = Modifier.padding(12.dp)
+                                fontSize = bodySize,
+                                modifier = Modifier.padding(spacing)
                             )
                         }
                     }
@@ -143,7 +205,7 @@ fun SignUpScreen(
                     OutlinedTextField(
                         value = name,
                         onValueChange = { name = it },
-                        label = { Text("Full Name") },
+                        label = { Text("Full Name", fontSize = bodySize) },
                         leadingIcon = {
                             Icon(
                                 Icons.Default.Person,
@@ -153,7 +215,7 @@ fun SignUpScreen(
                         },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(bottom = 12.dp),
+                            .padding(bottom = spacing),
                         shape = RoundedCornerShape(12.dp),
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedBorderColor = Color(0xFF667eea),
@@ -165,7 +227,7 @@ fun SignUpScreen(
                     OutlinedTextField(
                         value = email,
                         onValueChange = { email = it },
-                        label = { Text("Email Address") },
+                        label = { Text("Email Address", fontSize = bodySize) },
                         leadingIcon = {
                             Icon(
                                 Icons.Default.Email,
@@ -176,7 +238,7 @@ fun SignUpScreen(
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(bottom = 12.dp),
+                            .padding(bottom = spacing),
                         shape = RoundedCornerShape(12.dp),
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedBorderColor = Color(0xFF667eea),
@@ -188,7 +250,7 @@ fun SignUpScreen(
                     OutlinedTextField(
                         value = password,
                         onValueChange = { password = it },
-                        label = { Text("Password") },
+                        label = { Text("Password", fontSize = bodySize) },
                         leadingIcon = {
                             Icon(
                                 Icons.Default.Lock,
@@ -201,7 +263,7 @@ fun SignUpScreen(
                                 Text(
                                     if (passwordVisible) "Hide" else "Show",
                                     color = Color(0xFF667eea),
-                                    fontSize = 12.sp
+                                    fontSize = subtitleSize
                                 )
                             }
                         },
@@ -209,7 +271,7 @@ fun SignUpScreen(
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(bottom = 12.dp),
+                            .padding(bottom = spacing),
                         shape = RoundedCornerShape(12.dp),
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedBorderColor = Color(0xFF667eea),
@@ -221,7 +283,7 @@ fun SignUpScreen(
                     OutlinedTextField(
                         value = confirmPassword,
                         onValueChange = { confirmPassword = it },
-                        label = { Text("Confirm Password") },
+                        label = { Text("Confirm Password", fontSize = bodySize) },
                         leadingIcon = {
                             Icon(
                                 Icons.Default.Lock,
@@ -234,7 +296,7 @@ fun SignUpScreen(
                                 Text(
                                     if (confirmPasswordVisible) "Hide" else "Show",
                                     color = Color(0xFF667eea),
-                                    fontSize = 12.sp
+                                    fontSize = subtitleSize
                                 )
                             }
                         },
@@ -242,7 +304,7 @@ fun SignUpScreen(
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(bottom = 8.dp),
+                            .padding(bottom = spacing / 2),
                         shape = RoundedCornerShape(12.dp),
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedBorderColor = if (password.isNotEmpty() && confirmPassword.isNotEmpty() && password != confirmPassword)
@@ -253,24 +315,23 @@ fun SignUpScreen(
                         isError = password.isNotEmpty() && confirmPassword.isNotEmpty() && password != confirmPassword
                     )
 
-                    // Error message container with fixed height
+                    // Error message for password mismatch
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(20.dp)
-                            .padding(bottom = 4.dp)
+                            .height(spacing * 2)
                     ) {
                         if (password.isNotEmpty() && confirmPassword.isNotEmpty() && password != confirmPassword) {
                             Text(
                                 text = "Passwords don't match",
                                 color = Color.Red,
-                                fontSize = 11.sp,
-                                modifier = Modifier.padding(start = 16.dp)
+                                fontSize = subtitleSize,
+                                modifier = Modifier.padding(start = spacing)
                             )
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(spacing))
 
                     // Sign Up Button
                     Button(
@@ -280,7 +341,7 @@ fun SignUpScreen(
                         },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(50.dp),
+                            .height(buttonHeight),
                         enabled = name.isNotEmpty() && email.isNotEmpty() &&
                                  password.isNotEmpty() && password == confirmPassword && authState !is AuthState.Loading,
                         shape = RoundedCornerShape(12.dp),
@@ -296,13 +357,13 @@ fun SignUpScreen(
                         } else {
                             Text(
                                 "Create Account",
-                                fontSize = 18.sp,
+                                fontSize = headingSize * 0.8f,
                                 fontWeight = FontWeight.Bold
                             )
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(24.dp))
+                    Spacer(modifier = Modifier.height(spacing * 1.5f))
 
                     // Sign In Link
                     Row(
@@ -311,13 +372,15 @@ fun SignUpScreen(
                     ) {
                         Text(
                             "Already have an account? ",
-                            color = Color(0xFF718096)
+                            color = Color(0xFF718096),
+                            fontSize = bodySize
                         )
                         TextButton(onClick = onBackToSignInClick) {
                             Text(
                                 "Sign In",
                                 color = Color(0xFF667eea),
-                                fontWeight = FontWeight.Bold
+                                fontWeight = FontWeight.Bold,
+                                fontSize = bodySize
                             )
                         }
                     }

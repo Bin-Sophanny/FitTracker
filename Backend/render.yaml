@@ -1,0 +1,36 @@
+services:
+  - type: web
+    name: fittrack-api-gateway
+    plan: free
+    runtime: node
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: API_GATEWAY_PORT
+        value: 3000
+
+  - type: web
+    name: fittrack-user-service
+    plan: free
+    runtime: node
+    buildCommand: npm install
+    startCommand: npm run services:user
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: USER_SERVICE_PORT
+        value: 3001
+
+  - type: web
+    name: fittrack-fitness-service
+    plan: free
+    runtime: node
+    buildCommand: npm install
+    startCommand: npm run services:fitness
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: FITNESS_SERVICE_PORT
+        value: 3002

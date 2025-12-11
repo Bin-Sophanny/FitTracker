@@ -14,7 +14,6 @@ import kotlinx.coroutines.launch
 
 /**
  * ViewModel for managing fitness data from the backend API
- * Use this in your screens to fetch and manage data
  */
 class FitnessViewModel(
     private val context: Context,
@@ -37,47 +36,16 @@ class FitnessViewModel(
     private val _goalsState = MutableStateFlow<ApiResult<List<Goal>>>(ApiResult.Loading)
     val goalsState: StateFlow<ApiResult<List<Goal>>> = _goalsState.asStateFlow()
 
-    // Token Balance State
-    private val _tokenBalanceState = MutableStateFlow<ApiResult<TokenBalance>>(ApiResult.Loading)
-    val tokenBalanceState: StateFlow<ApiResult<TokenBalance>> = _tokenBalanceState.asStateFlow()
-
     /**
      * Fetch daily stats from backend
      */
     fun getDailyStats(limit: Int = 5) {
         viewModelScope.launch {
-            android.util.Log.d("FitnessViewModel", "")
-            android.util.Log.d("FitnessViewModel", "🔄🔄🔄 getDailyStats() STARTING 🔄🔄🔄")
-            android.util.Log.d("FitnessViewModel", "Limit: $limit")
-
             _dailyStatsState.value = ApiResult.Loading
-            android.util.Log.d("FitnessViewModel", "State set to: Loading")
-
             val result = safeApiCall {
                 repository.getDailyStats(context, limit)
             }
-
             _dailyStatsState.value = result
-
-            android.util.Log.d("FitnessViewModel", "")
-            android.util.Log.d("FitnessViewModel", "📊 Final Result:")
-            when (result) {
-                is ApiResult.Success -> {
-                    android.util.Log.d("FitnessViewModel", "✅ SUCCESS!")
-                    android.util.Log.d("FitnessViewModel", "Data size: ${result.data.size}")
-                    result.data.forEachIndexed { index, stats ->
-                        android.util.Log.d("FitnessViewModel", "[$index] ${stats.date}: ${stats.steps} steps")
-                    }
-                }
-                is ApiResult.Error -> {
-                    android.util.Log.e("FitnessViewModel", "❌ ERROR: ${result.message}")
-                }
-                is ApiResult.Loading -> {
-                    android.util.Log.d("FitnessViewModel", "⏳ Still loading...")
-                }
-            }
-            android.util.Log.d("FitnessViewModel", "🔄🔄🔄 getDailyStats() COMPLETED 🔄🔄🔄")
-            android.util.Log.d("FitnessViewModel", "")
         }
     }
 
@@ -91,17 +59,16 @@ class FitnessViewModel(
             }
             if (result is ApiResult.Success) {
                 onSuccess()
-                getDailyStats() // Refresh data
+                getDailyStats()
             }
         }
     }
 
     /**
-     * Sync steps to backend - for manual sync
+     * Sync steps to backend
      */
     fun syncStepsToBackend(stats: DailyStats) {
         viewModelScope.launch {
-            android.util.Log.d("FitnessViewModel", "🔄 Syncing stats to backend...")
             val result = safeApiCall {
                 repository.logDailyStats(context, stats)
             }
@@ -139,7 +106,7 @@ class FitnessViewModel(
             }
             if (result is ApiResult.Success) {
                 onSuccess()
-                getUserProfile() // Refresh profile
+                getUserProfile()
             }
         }
     }
@@ -166,7 +133,7 @@ class FitnessViewModel(
             }
             if (result is ApiResult.Success) {
                 onSuccess()
-                getWorkouts() // Refresh workouts
+                getWorkouts()
             }
         }
     }
@@ -193,7 +160,7 @@ class FitnessViewModel(
             }
             if (result is ApiResult.Success) {
                 onSuccess()
-                getGoals() // Refresh goals
+                getGoals()
             }
         }
     }
@@ -208,19 +175,7 @@ class FitnessViewModel(
             }
             if (result is ApiResult.Success) {
                 onSuccess()
-                getGoals() // Refresh goals
-            }
-        }
-    }
-
-    /**
-     * Get token balance
-     */
-    fun getTokenBalance() {
-        viewModelScope.launch {
-            _tokenBalanceState.value = ApiResult.Loading
-            _tokenBalanceState.value = safeApiCall {
-                repository.getTokenBalance()
+                getGoals()
             }
         }
     }

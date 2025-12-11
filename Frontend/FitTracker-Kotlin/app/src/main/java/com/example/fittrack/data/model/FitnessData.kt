@@ -11,7 +11,6 @@ data class FitnessData(
     val calories: Int = 0,
     val distance: Float = 0f,
     val activeMinutes: Int = 0,
-    val heartRate: Int? = null,
     val notes: String? = null,
     val createdAt: String? = null,
     val updatedAt: String? = null
@@ -46,7 +45,7 @@ data class FitnessStatsResponse(
     val period: String,
     val totalSteps: Int,
     val totalCalories: Int,
-    val totalDistance: Float,
+    val totalDistance: String,  // Changed to String to handle backend malformed data like "00.040.03"
     val totalActiveMinutes: Int,
     val averageSteps: Int,
     val averageCalories: Int,

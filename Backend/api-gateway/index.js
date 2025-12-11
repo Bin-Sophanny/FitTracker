@@ -26,10 +26,6 @@ app.use('/api/fitness', proxy(`http://localhost:${process.env.FITNESS_SERVICE_PO
   proxyReqPathResolver: (req) => `/fitness${req.url.replace('/api/fitness', '')}`
 }));
 
-app.use('/api/blockchain', proxy(`http://localhost:${process.env.BLOCKCHAIN_SERVICE_PORT || 3003}`, {
-  proxyReqPathResolver: (req) => `/blockchain${req.url.replace('/api/blockchain', '')}`
-}));
-
 // Error handling
 app.use((err, req, res, next) => {
   console.error(err);

@@ -11,13 +11,12 @@ import android.os.IBinder
 import android.util.Log
 import com.example.fittrack.data.model.DailyStats
 import com.example.fittrack.data.repository.FitTrackRepository
+import com.example.fittrack.util.DateUtils
 import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
-import java.text.SimpleDateFormat
-import java.util.*
 
 /**
  * Background service to count steps using device accelerometer/step counter sensor
@@ -118,7 +117,7 @@ class StepCounterService : Service(), SensorEventListener {
         Log.d(TAG, "👤 Current user: ${auth.currentUser?.email ?: "Anonymous"}")
         Log.d(TAG, "📊 Current steps loaded: $stepsToday")
         Log.d(TAG, "📅 Last sync date: $lastSyncDate")
-        Log.d(TAG, "⏰ Last backend sync: ${if (lastBackendSync > 0) SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date(lastBackendSync)) else "Never"}")
+        Log.d(TAG, "⏰ Last backend sync: ${if (lastBackendSync > 0) DateUtils.formatTimestamp(lastBackendSync) else "Never"}")
 
         checkAndResetDailySteps()
 
@@ -255,11 +254,12 @@ class StepCounterService : Service(), SensorEventListener {
     }
 
     private fun checkAndResetDailySteps() {
-        val currentDate = getCurrentDate()
+        val currentDate = DateUtils.getCurrentDate()
 
         if (lastSyncDate != currentDate) {
             // New day - reset steps
             Log.d(TAG, "🌅 New day detected. Resetting steps.")
+            Log.d(TAG, "📅 Old date: $lastSyncDate, New date: $currentDate")
             stepsToday = 0
             initialSteps = 0
             lastSyncDate = currentDate
@@ -285,7 +285,7 @@ class StepCounterService : Service(), SensorEventListener {
         Log.d(TAG, "📂 Loading steps from user-specific prefs: $prefsName")
         val prefs = getSharedPreferences(prefsName, MODE_PRIVATE)
         stepsToday = prefs.getInt(KEY_STEPS_TODAY, 0)
-        lastSyncDate = prefs.getString(KEY_LAST_SYNC_DATE, getCurrentDate()) ?: getCurrentDate()
+        lastSyncDate = prefs.getString(KEY_LAST_SYNC_DATE, DateUtils.getCurrentDate()) ?: DateUtils.getCurrentDate()
         initialSteps = prefs.getInt(KEY_INITIAL_STEPS, 0)
         lastBackendSync = prefs.getLong(KEY_LAST_BACKEND_SYNC, 0L)
 
@@ -308,9 +308,11 @@ class StepCounterService : Service(), SensorEventListener {
     private fun syncToBackend() {
         serviceScope.launch {
             try {
+                Log.d(TAG, "========================================")
                 Log.d(TAG, "🔄 Starting sync to backend...")
                 Log.d(TAG, "👤 User: ${auth.currentUser?.email}")
                 Log.d(TAG, "📊 Current steps: $stepsToday")
+                Log.d(TAG, "📅 Last sync date stored: $lastSyncDate")
 
                 val userId = auth.currentUser?.uid
                 if (userId == null) {
@@ -318,33 +320,42 @@ class StepCounterService : Service(), SensorEventListener {
                     return@launch
                 }
 
+                // Get the current date - THIS IS THE CRITICAL PART
+                val currentDate = DateUtils.getCurrentDate()
+                Log.d(TAG, "📆 Date from DateUtils.getCurrentDate(): $currentDate")
+                Log.d(TAG, "📆 Creating DailyStats with date: $currentDate")
+
                 val stats = DailyStats(
                     userId = userId,
-                    date = getCurrentDate(),
+                    date = currentDate,
                     steps = stepsToday,
                     calories = estimateCalories(stepsToday),
                     distance = estimateDistance(stepsToday),
-                    activeMinutes = estimateActiveMinutes(stepsToday),
-                    heartRate = null
+                    activeMinutes = estimateActiveMinutes(stepsToday)
                 )
 
-                Log.d(TAG, "📤 Stats to sync: date=${stats.date}, steps=${stats.steps}, calories=${stats.calories}, distance=${stats.distance}km")
+                Log.d(TAG, "📤 Stats object created - date=${stats.date}, steps=${stats.steps}, calories=${stats.calories}, distance=${stats.distance}km")
+                Log.d(TAG, "📤 About to send to backend API...")
 
                 val response = repository.logDailyStats(this@StepCounterService, stats)
 
                 if (response.isSuccessful) {
                     lastBackendSync = System.currentTimeMillis()
                     saveStepsToPrefs()
-                    Log.d(TAG, "✅ Successfully synced $stepsToday steps to backend at ${SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(Date())}")
+                    Log.d(TAG, "✅ Successfully synced $stepsToday steps to backend at ${DateUtils.formatTime(System.currentTimeMillis())}")
+                    Log.d(TAG, "✅ Backend accepted data with date: ${stats.date}")
+                    Log.d(TAG, "========================================")
                 } else {
                     val errorBody = response.errorBody()?.string()
                     Log.e(TAG, "❌ Failed to sync: HTTP ${response.code()} - ${response.message()}")
                     Log.e(TAG, "❌ Error body: $errorBody")
+                    Log.d(TAG, "========================================")
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "❌ Exception during sync: ${e.javaClass.simpleName}")
                 Log.e(TAG, "❌ Error message: ${e.message}")
                 Log.e(TAG, "❌ Stack trace: ${e.stackTraceToString()}")
+                Log.d(TAG, "========================================")
             }
         }
     }
@@ -362,10 +373,6 @@ class StepCounterService : Service(), SensorEventListener {
     private fun estimateActiveMinutes(steps: Int): Int {
         // Rough estimate: 100 steps per minute of walking
         return steps / 100
-    }
-
-    private fun getCurrentDate(): String {
-        return SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
     }
 
     override fun onDestroy() {

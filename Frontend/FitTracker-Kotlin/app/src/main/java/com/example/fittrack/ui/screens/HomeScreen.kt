@@ -22,9 +22,8 @@ import com.example.fittrack.data.model.DailyStats
 import com.example.fittrack.viewmodel.FitnessViewModel
 import com.example.fittrack.data.api.ApiResult
 import androidx.lifecycle.viewmodel.compose.viewModel
-import java.text.SimpleDateFormat
-import java.util.*
 import com.example.fittrack.util.StepCounterHelper
+import com.example.fittrack.util.DateUtils
 import com.example.fittrack.service.StepCounterService
 import androidx.compose.ui.platform.LocalContext
 import kotlinx.coroutines.launch
@@ -67,8 +66,15 @@ fun HomeScreen(
     // Start step counter service and update real-time steps
     // Restart when userId changes (account switch)
     LaunchedEffect(userId) {
-        android.util.Log.d("HomeScreen", "🔄 User changed or logged in: $userId")
-        android.util.Log.d("HomeScreen", "📊 Resetting real-time steps to 0 for new user")
+        android.util.Log.d("HomeScreen", "")
+        android.util.Log.d("HomeScreen", "========================================")
+        android.util.Log.d("HomeScreen", "🔄 USER LOGIN/SWITCH DETECTED")
+        android.util.Log.d("HomeScreen", "========================================")
+        android.util.Log.d("HomeScreen", "👤 User ID (Firebase UID): $userId")
+        android.util.Log.d("HomeScreen", "📱 Device: New device or session")
+        android.util.Log.d("HomeScreen", "📊 Local steps on this device: 0 (new device)")
+        android.util.Log.d("HomeScreen", "🔍 Will fetch backend data for this user...")
+        android.util.Log.d("HomeScreen", "========================================")
 
         // Reset steps immediately for new user
         realTimeSteps = 0
@@ -78,7 +84,8 @@ fun HomeScreen(
         StepCounterService.stop(context)
         StepCounterService.start(context)
 
-        // Fetch backend data for this user
+        // Fetch backend data for this user - THIS IS CRUCIAL FOR CROSS-DEVICE DATA
+        android.util.Log.d("HomeScreen", "📡 Fetching data from backend for user: $userId")
         fitnessViewModel.getDailyStats(limit = 5)
 
         // Update real-time steps every second
@@ -105,12 +112,11 @@ fun HomeScreen(
                 try {
                     val stats = realTimeStats ?: DailyStats(
                         userId = userId,
-                        date = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date()),
+                        date = DateUtils.getCurrentDate(),
                         steps = realTimeSteps,
                         calories = 0,
                         distance = 0f,
-                        activeMinutes = 0,
-                        heartRate = null
+                        activeMinutes = 0
                     )
                     android.util.Log.d("HomeScreen", "📤 Auto-syncing: ${stats.steps} steps")
                     fitnessViewModel.syncStepsToBackend(stats)
@@ -134,12 +140,11 @@ fun HomeScreen(
             try {
                 val stats = realTimeStats ?: DailyStats(
                     userId = userId,
-                    date = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date()),
+                    date = DateUtils.getCurrentDate(),
                     steps = realTimeSteps,
                     calories = 0,
                     distance = 0f,
-                    activeMinutes = 0,
-                    heartRate = null
+                    activeMinutes = 0
                 )
                 android.util.Log.d("HomeScreen", "📤 Syncing: ${stats.steps} steps")
                 fitnessViewModel.syncStepsToBackend(stats)
@@ -157,26 +162,40 @@ fun HomeScreen(
     // Log the API state for debugging
     LaunchedEffect(dailyStatsState) {
         android.util.Log.d("HomeScreen", "")
-        android.util.Log.d("HomeScreen", "🖥️🖥️🖥️ UI STATE CHANGED 🖥️🖥️🖥️")
+        android.util.Log.d("HomeScreen", "========================================")
+        android.util.Log.d("HomeScreen", "🖥️ UI STATE CHANGED - Backend Response")
+        android.util.Log.d("HomeScreen", "========================================")
         android.util.Log.d("HomeScreen", "API State: ${dailyStatsState::class.simpleName}")
         when (dailyStatsState) {
             is ApiResult.Success -> {
                 val data = (dailyStatsState as ApiResult.Success<List<DailyStats>>).data
                 android.util.Log.d("HomeScreen", "✅ SUCCESS - Data received from backend")
-                android.util.Log.d("HomeScreen", "📊 Data size: ${data.size}")
+                android.util.Log.d("HomeScreen", "📊 Total days of data: ${data.size}")
                 if (data.isNotEmpty()) {
-                    android.util.Log.d("HomeScreen", "📊 Today's data: ${data[0].date} - ${data[0].steps} steps")
+                    android.util.Log.d("HomeScreen", "")
+                    android.util.Log.d("HomeScreen", "📋 BACKEND DATA DETAILS:")
+                    data.forEachIndexed { index, stats ->
+                        android.util.Log.d("HomeScreen", "  Day $index: ${stats.date} - ${stats.steps} steps, ${stats.calories} cal")
+                    }
+                    android.util.Log.d("HomeScreen", "")
+                    android.util.Log.d("HomeScreen", "✅ This data will be displayed in the app")
                 } else {
                     android.util.Log.w("HomeScreen", "⚠️ Backend returned empty data array")
+                    android.util.Log.w("HomeScreen", "   This could mean:")
+                    android.util.Log.w("HomeScreen", "   - New user with no data yet")
+                    android.util.Log.w("HomeScreen", "   - Data was pushed from another device but not synced")
+                    android.util.Log.w("HomeScreen", "   - Backend issue")
                 }
             }
             is ApiResult.Error -> {
                 android.util.Log.e("HomeScreen", "❌ ERROR from API: ${(dailyStatsState as ApiResult.Error).message}")
+                android.util.Log.e("HomeScreen", "   Data from other devices will NOT be visible")
             }
             is ApiResult.Loading -> {
-                android.util.Log.d("HomeScreen", "⏳ Loading state...")
+                android.util.Log.d("HomeScreen", "⏳ Loading backend data...")
             }
         }
+        android.util.Log.d("HomeScreen", "========================================")
         android.util.Log.d("HomeScreen", "")
     }
 
@@ -186,36 +205,57 @@ fun HomeScreen(
             android.util.Log.d("HomeScreen", "🎨 Building UI with SUCCESS data")
             val data = (dailyStatsState as ApiResult.Success<List<DailyStats>>).data.toMutableList()
 
-            // If we have real-time step data for today, replace the first entry
-            if (realTimeStats != null && data.isNotEmpty() &&
-                data[0].date == SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())) {
-                android.util.Log.d("HomeScreen", "🔄 Merging real-time steps (${realTimeSteps}) with backend data (${data[0].steps})")
-                // Update today's data with real-time steps
-                data[0] = data[0].copy(
-                    steps = maxOf(realTimeSteps, data[0].steps),
-                    calories = realTimeStats!!.calories,
-                    distance = realTimeStats!!.distance,
-                    activeMinutes = realTimeStats!!.activeMinutes
-                )
-            } else if (realTimeStats != null) {
-                android.util.Log.d("HomeScreen", "➕ Adding today's real-time data to beginning")
-                // Add today's real-time data at the beginning
-                data.add(0, realTimeStats!!)
-            }
-
             if (data.isEmpty()) {
                 android.util.Log.w("HomeScreen", "⚠️ Backend data empty, using real-time only")
+                // Backend returned empty - this is a new user or no data yet
                 listOf(realTimeStats ?: DailyStats(
                     userId = userId,
-                    date = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date()),
+                    date = DateUtils.getCurrentDate(),
                     steps = realTimeSteps,
                     calories = 0,
                     distance = 0f,
-                    activeMinutes = 0,
-                    heartRate = null
+                    activeMinutes = 0
                 ))
             } else {
+                // Backend has data - show it!
+                android.util.Log.d("HomeScreen", "✅ Backend has ${data.size} days of data")
+
+                // Sort data by date descending (newest first, today at index 0)
+                data.sortByDescending { DateUtils.extractDateFromIso(it.date) }
+                android.util.Log.d("HomeScreen", "📅 Sorted data by date (newest first)")
+
+                // Find today's data in the array (should be at index 0 after sorting)
+                val todayIndex = data.indexOfFirst { DateUtils.isToday(it.date) }
+                val hasTodayInBackend = todayIndex >= 0
+
+                if (hasTodayInBackend) {
+                    // Backend has today's data - merge with real-time steps (use maximum)
+                    val backendToday = data[todayIndex]
+                    android.util.Log.d("HomeScreen", "🔄 Found today at index $todayIndex: ${backendToday.steps} steps, Local: ${realTimeSteps} steps")
+
+                    // Merge local and backend data for today
+                    data[todayIndex] = backendToday.copy(
+                        steps = maxOf(realTimeSteps, backendToday.steps),
+                        calories = maxOf(realTimeStats?.calories ?: 0, backendToday.calories),
+                        distance = maxOf(realTimeStats?.distance ?: 0f, backendToday.distance),
+                        activeMinutes = maxOf(realTimeStats?.activeMinutes ?: 0, backendToday.activeMinutes)
+                    )
+                    android.util.Log.d("HomeScreen", "✅ Merged today's data: ${data[todayIndex].steps} steps")
+                } else if (realTimeStats != null && realTimeSteps > 0) {
+                    // Backend doesn't have today yet, but we have local steps
+                    android.util.Log.d("HomeScreen", "➕ Adding today's local data (${realTimeSteps} steps) to backend data")
+                    data.add(0, realTimeStats!!)
+                }
+
                 android.util.Log.d("HomeScreen", "✅ Displaying ${data.size} days of data")
+                android.util.Log.d("HomeScreen", "")
+                android.util.Log.d("HomeScreen", "📋 FINAL DATA ARRAY (passing to StatsScreen):")
+                data.forEachIndexed { index, stats ->
+                    val dateDisplay = DateUtils.extractDateFromIso(stats.date)
+                    val isToday = DateUtils.isToday(stats.date)
+                    android.util.Log.d("HomeScreen", "  [$index] Date: $dateDisplay ${if (isToday) "(TODAY)" else "(PAST)"} - Steps: ${stats.steps}")
+                }
+                android.util.Log.d("HomeScreen", "")
                 data
             }
         }
@@ -224,12 +264,11 @@ fun HomeScreen(
             // Backend not connected - show real-time data only
             listOf(realTimeStats ?: DailyStats(
                 userId = userId,
-                date = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date()),
+                date = DateUtils.getCurrentDate(),
                 steps = realTimeSteps,
                 calories = 0,
                 distance = 0f,
-                activeMinutes = 0,
-                heartRate = null
+                activeMinutes = 0
             ))
         }
         else -> {
@@ -237,16 +276,14 @@ fun HomeScreen(
             // Loading state - show real-time data or default
             listOf(realTimeStats ?: DailyStats(
                 userId = userId,
-                date = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date()),
+                date = DateUtils.getCurrentDate(),
                 steps = realTimeSteps,
                 calories = 0,
                 distance = 0f,
-                activeMinutes = 0,
-                heartRate = null
+                activeMinutes = 0
             ))
         }
     }
-
     // Only show error banner if there's an actual connection error
     // BUT - steps should still count locally even if backend is down!
     val isActualError = dailyStatsState is ApiResult.Error
@@ -330,27 +367,27 @@ fun HomeScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .align(Alignment.TopCenter)
-                        .padding(horizontal = 16.dp, vertical = 8.dp)
+                        .padding(horizontal = 12.dp, vertical = 6.dp)
                         .statusBarsPadding(),
                     colors = CardDefaults.cardColors(
                         containerColor = Color(0xFFFFEBEE)
                     ),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+                    elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
                 ) {
                     Row(
-                        modifier = Modifier.padding(12.dp),
+                        modifier = Modifier.padding(10.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Icon(
                             Icons.Default.CloudOff,
                             contentDescription = null,
                             tint = Color(0xFFE53E3E),
-                            modifier = Modifier.size(20.dp)
+                            modifier = Modifier.size(18.dp)
                         )
-                        Spacer(modifier = Modifier.width(8.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
                         Text(
                             text = "Backend not connected - Steps counting locally",
-                            fontSize = 12.sp,
+                            fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
                             color = Color(0xFFE53E3E)
                         )
@@ -358,19 +395,21 @@ fun HomeScreen(
                 }
             }
 
-            // Floating/Overlay Bottom Navigation
+            // Floating/Overlay Bottom Navigation - Responsive design
             Card(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
-                    .wrapContentSize()
-                    .padding(horizontal = 12.dp, vertical = 12.dp),
+                    .fillMaxWidth(0.95f) // 95% of screen width for better fit
+                    .padding(horizontal = 8.dp, vertical = 8.dp),
                 colors = CardDefaults.cardColors(containerColor = colors.cardBackground),
                 elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
                 shape = RoundedCornerShape(16.dp)
             ) {
                 Row(
-                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 4.dp, vertical = 4.dp),
+                    horizontalArrangement = Arrangement.SpaceEvenly,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     NavigationButton(

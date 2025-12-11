@@ -4,10 +4,9 @@ import android.content.Context
 import com.example.fittrack.data.api.*
 import com.example.fittrack.data.model.*
 import com.example.fittrack.auth.TokenManager
+import com.example.fittrack.util.DateUtils
 import com.google.firebase.auth.FirebaseAuth
 import retrofit2.Response
-import java.text.SimpleDateFormat
-import java.util.*
 
 /**
  * Repository class to handle all API calls with JWT token authentication
@@ -118,21 +117,48 @@ class FitTrackRepository(
             if (response.isSuccessful) {
                 val statsResponse = response.body()
                 android.util.Log.d("FitTrackRepo", "Success! Response body: $statsResponse")
+                android.util.Log.d("FitTrackRepo", "")
+                android.util.Log.d("FitTrackRepo", "🔍 BACKEND RESPONSE DETAILS:")
+                android.util.Log.d("FitTrackRepo", "   Data array size: ${statsResponse?.data?.size ?: 0}")
+                android.util.Log.d("FitTrackRepo", "   Total steps: ${statsResponse?.totalSteps ?: 0}")
+                android.util.Log.d("FitTrackRepo", "   Period: ${statsResponse?.period ?: "unknown"}")
+                android.util.Log.d("FitTrackRepo", "")
 
                 // Convert FitnessData to DailyStats
+                // Keep raw UTC date from MongoDB to display actual UTC date in StatsScreen
                 val dailyStatsList = statsResponse?.data?.map { fitness ->
+                    // MongoDB returns: "2025-12-10T00:00:00.000+07:00" or "2025-12-09T00:00:00.000+00:00"
+                    // Keep as-is to show UTC date in StatsScreen for verification
+
+                    android.util.Log.d("FitTrackRepo", "📅 Retrieved from MongoDB: date=${fitness.date}, steps=${fitness.steps}, cal=${fitness.calories}, dist=${fitness.distance}")
+
                     DailyStats(
                         userId = fitness.userId,
-                        date = fitness.date,
+                        date = fitness.date,  // Keep raw date from MongoDB (UTC format)
                         steps = fitness.steps,
                         calories = fitness.calories,
                         distance = fitness.distance,
                         activeMinutes = fitness.activeMinutes,
-                        heartRate = fitness.heartRate
                     )
                 } ?: emptyList()
 
-                android.util.Log.d("FitTrackRepo", "Data count: ${dailyStatsList.size}")
+                android.util.Log.d("FitTrackRepo", "")
+                android.util.Log.d("FitTrackRepo", "========== RETRIEVED DATES (from MongoDB) ==========")
+                dailyStatsList.forEachIndexed { index, stats ->
+                    android.util.Log.d("FitTrackRepo", "[$index] Date: ${stats.date}, Steps: ${stats.steps}, Cal: ${stats.calories}, Dist: ${stats.distance} km")
+                }
+                android.util.Log.d("FitTrackRepo", "=========================================================")
+                android.util.Log.d("FitTrackRepo", "✅ Total records from backend: ${dailyStatsList.size}")
+                android.util.Log.d("FitTrackRepo", "✅ Returning (with limit=$limit): ${dailyStatsList.take(limit).size} records")
+                android.util.Log.d("FitTrackRepo", "")
+
+                if (dailyStatsList.size < 2) {
+                    android.util.Log.w("FitTrackRepo", "⚠️ WARNING: Backend only returned ${dailyStatsList.size} day(s) of data!")
+                    android.util.Log.w("FitTrackRepo", "   Expected: Multiple days for 'week' range")
+                    android.util.Log.w("FitTrackRepo", "   This is a BACKEND ISSUE - the MongoDB query is not returning historical data")
+                    android.util.Log.w("FitTrackRepo", "   WORKAROUND: Try using getSummary endpoint or fix backend query")
+                }
+
                 Response.success(dailyStatsList.take(limit))
             } else {
                 val errorBody = response.errorBody()?.string()
@@ -158,8 +184,7 @@ class FitTrackRepository(
                 steps = 0,
                 calories = 0,
                 distance = 0f,
-                activeMinutes = 0,
-                heartRate = null
+                activeMinutes = 0
             )
             return Response.success(emptyStats)
         }
@@ -172,14 +197,17 @@ class FitTrackRepository(
 
             if (response.isSuccessful) {
                 val fitness = response.body()!!
+
+                // Keep raw UTC date from MongoDB for verification
+                android.util.Log.d("FitTrackRepo", "📅 Today Stats (UTC): ${fitness.date}")
+
                 val dailyStats = DailyStats(
                     userId = fitness.userId,
-                    date = fitness.date,
+                    date = fitness.date,  // Keep raw UTC date from MongoDB
                     steps = fitness.steps,
                     calories = fitness.calories,
                     distance = fitness.distance,
                     activeMinutes = fitness.activeMinutes,
-                    heartRate = fitness.heartRate
                 )
                 Response.success(dailyStats)
             } else {
@@ -192,8 +220,7 @@ class FitTrackRepository(
                     steps = 0,
                     calories = 0,
                     distance = 0f,
-                    activeMinutes = 0,
-                    heartRate = null
+                    activeMinutes = 0
                 )
                 Response.success(emptyStats)
             }
@@ -205,8 +232,7 @@ class FitTrackRepository(
                 steps = 0,
                 calories = 0,
                 distance = 0f,
-                activeMinutes = 0,
-                heartRate = null
+                activeMinutes = 0
             )
             Response.success(emptyStats)
         }
@@ -234,20 +260,34 @@ class FitTrackRepository(
         android.util.Log.d("FitTrackRepo", "✅ UserID (Firebase UID): $userId")
 
         return try {
-            // Convert DailyStats to LogFitnessRequest
-            // IMPORTANT: Using Firebase UID as userId for backend
+            // Send date with GMT+7 timezone information to prevent MongoDB from converting to UTC
+            // Format: "2025-12-10T00:00:00.000+07:00" instead of just "2025-12-10"
+            // This ensures MongoDB stores December 10th in GMT+7, not December 9th in UTC
+            val dateWithTimezone = DateUtils.getCurrentDateWithTimezone()
+
+            android.util.Log.d("FitTrackRepo", "📅 Date Formatting for MongoDB:")
+            android.util.Log.d("FitTrackRepo", "   Original: ${stats.date}")
+            android.util.Log.d("FitTrackRepo", "   With TZ:  $dateWithTimezone")
+            android.util.Log.d("FitTrackRepo", "   Purpose: Preserve GMT+7 timezone in MongoDB")
+
             val logRequest = LogFitnessRequest(
-                userId = userId,  // Firebase UID used as userId
-                date = stats.date,
+                userId = userId,
+                date = dateWithTimezone,  // Send with timezone: "2025-12-10T00:00:00.000+07:00"
                 steps = stats.steps,
                 calories = stats.calories,
                 distance = stats.distance,
-                activeMinutes = stats.activeMinutes,
-                heartRate = stats.heartRate
+                activeMinutes = stats.activeMinutes
             )
 
             android.util.Log.d("FitTrackRepo", "📤 Sending request to /api/fitness/log")
-            android.util.Log.d("FitTrackRepo", "📊 Data: steps=${stats.steps}, calories=${stats.calories}, distance=${stats.distance}km, date=${stats.date}")
+            android.util.Log.d("FitTrackRepo", "📊 REQUEST BODY:")
+            android.util.Log.d("FitTrackRepo", "   userId: $userId")
+            android.util.Log.d("FitTrackRepo", "   date: ${stats.date} (Asia/Singapore GMT+8)")
+            android.util.Log.d("FitTrackRepo", "   AWS Region: ap-southeast-1")
+            android.util.Log.d("FitTrackRepo", "   steps: ${stats.steps}")
+            android.util.Log.d("FitTrackRepo", "   calories: ${stats.calories}")
+            android.util.Log.d("FitTrackRepo", "   distance: ${stats.distance}km")
+            android.util.Log.d("FitTrackRepo", "   activeMinutes: ${stats.activeMinutes}")
 
             val response = apiService.logFitness(token, logRequest)
 
@@ -264,7 +304,6 @@ class FitTrackRepository(
                     calories = logResponse.data.calories,
                     distance = logResponse.data.distance,
                     activeMinutes = logResponse.data.activeMinutes,
-                    heartRate = logResponse.data.heartRate
                 )
                 Response.success(dailyStats)
             } else {
@@ -331,25 +370,11 @@ class FitTrackRepository(
         throw Exception("Goal service not available")
     }
 
-    @Suppress("unused")
-    fun getTransactions(): Response<List<TokenTransaction>> {
-        return Response.success(emptyList())
-    }
-
-    fun getTokenBalance(): Response<TokenBalance> {
-        val tokenBalance = TokenBalance(
-            balance = 0,
-            totalEarned = 0,
-            transactions = emptyList()
-        )
-        return Response.success(tokenBalance)
-    }
 
     // ==================== Helper Methods ====================
 
     private fun getCurrentDate(): String {
-        val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
-        return dateFormat.format(Date())
+        return DateUtils.getCurrentDate()
     }
 }
 

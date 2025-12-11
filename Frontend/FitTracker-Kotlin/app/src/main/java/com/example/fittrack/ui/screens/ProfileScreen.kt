@@ -13,10 +13,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.example.fittrack.ui.theme.LocalThemeManager
 import com.example.fittrack.ui.theme.getAppColors
+import com.example.fittrack.ui.theme.ResponsiveDimens
 
 @Composable
 fun ProfileScreen(
@@ -36,57 +35,57 @@ fun ProfileScreen(
             .background(colors.background)
             .statusBarsPadding()
             .navigationBarsPadding()
-            .padding(12.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp)
+            .padding(ResponsiveDimens.horizontalPadding()),
+        verticalArrangement = Arrangement.spacedBy(ResponsiveDimens.spacingMedium())
     ) {
         // Header without back button - just title
         Text(
             text = "Profile",
-            fontSize = 20.sp,
+            fontSize = ResponsiveDimens.textSizeTitle(),
             fontWeight = FontWeight.Bold,
             color = colors.textPrimary,
-            modifier = Modifier.padding(vertical = 6.dp)
+            modifier = Modifier.padding(vertical = ResponsiveDimens.spacingSmall())
         )
 
         // Profile Avatar and Info
         Card(
             modifier = Modifier.fillMaxWidth(),
             colors = CardDefaults.cardColors(containerColor = colors.cardBackground),
-            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+            elevation = CardDefaults.cardElevation(defaultElevation = ResponsiveDimens.cardElevation())
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(18.dp),
+                    .padding(ResponsiveDimens.cardPadding()),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 // Large Profile Avatar
                 Box(
                     modifier = Modifier
-                        .size(90.dp)
+                        .size(ResponsiveDimens.avatarSizeMedium())
                         .background(colors.primary, CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
                         text = userName.take(1).uppercase(),
-                        fontSize = 36.sp,
+                        fontSize = ResponsiveDimens.textSizeHeading(),
                         fontWeight = FontWeight.Bold,
                         color = Color.White
                     )
                 }
 
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(ResponsiveDimens.spacingMedium()))
 
                 Text(
                     text = userName,
-                    fontSize = 20.sp,
+                    fontSize = ResponsiveDimens.textSizeTitle(),
                     fontWeight = FontWeight.Bold,
                     color = colors.textPrimary
                 )
 
                 Text(
                     text = userEmail,
-                    fontSize = 14.sp,
+                    fontSize = ResponsiveDimens.textSizeBody(),
                     color = colors.textSecondary
                 )
             }
@@ -96,17 +95,17 @@ fun ProfileScreen(
         Card(
             modifier = Modifier.fillMaxWidth(),
             colors = CardDefaults.cardColors(containerColor = colors.cardBackground),
-            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+            elevation = CardDefaults.cardElevation(defaultElevation = ResponsiveDimens.cardElevation())
         ) {
             Column(
-                modifier = Modifier.padding(12.dp)
+                modifier = Modifier.padding(ResponsiveDimens.spacingMedium())
             ) {
                 Text(
                     text = "Settings",
-                    fontSize = 16.sp,
+                    fontSize = ResponsiveDimens.textSizeSubtitle(),
                     fontWeight = FontWeight.Bold,
                     color = colors.textPrimary,
-                    modifier = Modifier.padding(bottom = 12.dp)
+                    modifier = Modifier.padding(bottom = ResponsiveDimens.spacingMedium())
                 )
 
                 ProfileMenuItem(
@@ -134,28 +133,28 @@ fun ProfileScreen(
                     colors = colors
                 )
 
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(ResponsiveDimens.spacingMedium()))
 
                 // Logout Button inside settings card
                 Button(
                     onClick = onLogoutClick,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(50.dp),
+                        .height(ResponsiveDimens.buttonHeight()),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = colors.error
                     ),
-                    shape = RoundedCornerShape(12.dp)
+                    shape = RoundedCornerShape(ResponsiveDimens.cornerRadius())
                 ) {
                     Icon(
                         Icons.AutoMirrored.Filled.ExitToApp,
                         contentDescription = "Logout",
-                        modifier = Modifier.size(20.dp)
+                        modifier = Modifier.size(ResponsiveDimens.iconSizeMedium())
                     )
-                    Spacer(modifier = Modifier.width(8.dp))
+                    Spacer(modifier = Modifier.width(ResponsiveDimens.spacingSmall()))
                     Text(
-                        text = "Logout",
-                        fontSize = 16.sp,
+                        "Logout",
+                        fontSize = ResponsiveDimens.textSizeSubtitle(),
                         fontWeight = FontWeight.Bold
                     )
                 }
@@ -180,12 +179,12 @@ fun ProfileMenuItem(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = 10.dp),
+                .padding(vertical = ResponsiveDimens.spacingSmall()),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Box(
                 modifier = Modifier
-                    .size(36.dp)
+                    .size(ResponsiveDimens.iconBoxSize())
                     .background(colors.primary.copy(alpha = 0.1f), CircleShape),
                 contentAlignment = Alignment.Center
             ) {
@@ -193,24 +192,24 @@ fun ProfileMenuItem(
                     icon,
                     contentDescription = title,
                     tint = colors.primary,
-                    modifier = Modifier.size(18.dp)
+                    modifier = Modifier.size(ResponsiveDimens.iconSizeSmall())
                 )
             }
 
-            Spacer(modifier = Modifier.width(12.dp))
+            Spacer(modifier = Modifier.width(ResponsiveDimens.spacingMedium()))
 
             Column(
                 modifier = Modifier.weight(1f)
             ) {
                 Text(
                     text = title,
-                    fontSize = 14.sp,
+                    fontSize = ResponsiveDimens.textSizeBody(),
                     fontWeight = FontWeight.Medium,
                     color = colors.textPrimary
                 )
                 Text(
                     text = subtitle,
-                    fontSize = 12.sp,
+                    fontSize = ResponsiveDimens.textSizeSmall(),
                     color = colors.textSecondary
                 )
             }
@@ -219,7 +218,7 @@ fun ProfileMenuItem(
                 Icons.Default.ChevronRight,
                 contentDescription = "Navigate",
                 tint = colors.textSecondary,
-                modifier = Modifier.size(18.dp)
+                modifier = Modifier.size(ResponsiveDimens.iconSizeSmall())
             )
         }
     }

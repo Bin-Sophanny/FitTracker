@@ -26,13 +26,6 @@ data class AuthResponse(
     val token: String
 )
 
-// ==================== Blockchain Requests ====================
-
-data class AwardRewardsRequest(
-    val userAddress: String,
-    val amount: Int
-)
-
 // ==================== Response Models ====================
 
 data class RewardsResponse(

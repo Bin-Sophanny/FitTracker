@@ -94,27 +94,6 @@ interface ApiService {
     ): Response<SummaryResponse>
 
 
-    // ==================== BLOCKCHAIN ROUTES ====================
-
-    /**
-     * Get user rewards
-     * GET /api/blockchain/rewards/{address}
-     */
-    @GET("api/blockchain/rewards/{address}")
-    suspend fun getRewards(
-        @Path("address") address: String
-    ): Response<RewardsResponse>
-
-    /**
-     * Award rewards
-     * POST /api/blockchain/rewards
-     */
-    @POST("api/blockchain/rewards")
-    suspend fun awardRewards(
-        @Body request: AwardRewardsRequest
-    ): Response<RewardResponse>
-
-
     // ==================== HEALTH CHECK ====================
 
     /**

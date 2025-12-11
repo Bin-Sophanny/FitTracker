@@ -9,8 +9,16 @@ const PORT = process.env.FITNESS_SERVICE_PORT || 3002;
 // Middleware
 app.use(express.json());
 
-// MongoDB Connection
-mongoose.connect(process.env.MONGODB_FITNESS_URI || 'mongodb://localhost:27017/fittrack_fitness')
+// MongoDB Connection with retry options
+mongoose.connect(process.env.MONGODB_FITNESS_URI || 'mongodb://localhost:27017/fittrack_fitness', {
+  maxPoolSize: 10,
+  minPoolSize: 2,
+  serverSelectionTimeoutMS: 5000,
+  socketTimeoutMS: 45000,
+  connectTimeoutMS: 10000,
+  retryWrites: true,
+  retryReads: true
+})
   .then(() => console.log('✅ Fitness Service: MongoDB connected'))
   .catch(err => console.error('❌ MongoDB connection error:', err));
 
@@ -29,21 +37,31 @@ function getCambodiaDateOnly() {
   return new Date(cambodiaTime.getFullYear(), cambodiaTime.getMonth(), cambodiaTime.getDate(), 0, 0, 0, 0);
 }
 
-// Fitness Data Schema
-const fitnessDataSchema = new mongoose.Schema({
-  userId: { type: String, required: true, index: true },
-  date: { type: Date, required: true, index: true },
-  steps: { type: Number, default: 0 },
-  calories: { type: Number, default: 0 },
-  distance: { type: Number, default: 0 },
-  activeMinutes: { type: Number, default: 0 },
-  heartRate: Number,
-  notes: String,
-  createdAt: { type: Date, default: Date.now },
-  updatedAt: { type: Date, default: Date.now }
-});
+// Helper function to generate date range pattern for regex
+function generateDateRange(startDateStr, endDateStr) {
+  const dates = [];
+  
+  // Parse dates from "YYYY-MM-DD" format
+  const [startYear, startMonth, startDay] = startDateStr.split('-').map(Number);
+  const [endYear, endMonth, endDay] = endDateStr.split('-').map(Number);
+  
+  const current = new Date(startYear, startMonth - 1, startDay);
+  const end = new Date(endYear, endMonth - 1, endDay);
+  
+  while (current <= end) {
+    const year = current.getFullYear();
+    const month = String(current.getMonth() + 1).padStart(2, '0');
+    const day = String(current.getDate()).padStart(2, '0');
+    dates.push(`${year}-${month}-${day}`);
+    current.setDate(current.getDate() + 1);
+  }
+  
+  console.log(`[generateDateRange] Generated dates: ${dates.join(', ')}`);
+  return dates.join('|');
+}
 
-const FitnessData = mongoose.model('FitnessData', fitnessDataSchema);
+// Import FitnessData model from shared models
+const FitnessData = require('../../shared/models/FitnessData.js');
 
 // Middleware: Verify JWT token
 const verifyToken = (req, res, next) => {
@@ -68,13 +86,22 @@ app.get('/health', (req, res) => {
 app.get('/fitness/today/:userId', verifyToken, async (req, res) => {
   try {
     const { userId } = req.params;
-    // Use Cambodia timezone (GMT+7)
-    const today = getCambodiaDateOnly();
-    const tomorrow = new Date(today.getTime() + 86400000);
+    
+    // Get today's date in Cambodia timezone
+    const cambodiaToday = getCambodiaDateOnly();
+    
+    // Convert to UTC for MongoDB query
+    // Subtract 7 hours to convert Cambodia local to UTC
+    const todayUTC = new Date(cambodiaToday.getTime() - (CAMBODIA_TIMEZONE_OFFSET * 60 * 60 * 1000));
+    const startOfDayUTC = new Date(todayUTC);
+    startOfDayUTC.setUTCHours(0, 0, 0, 0);
+    
+    const endOfDayUTC = new Date(startOfDayUTC);
+    endOfDayUTC.setUTCDate(endOfDayUTC.getUTCDate() + 1);
 
     const data = await FitnessData.findOne({
       userId,
-      date: { $gte: today, $lt: tomorrow }
+      date: { $gte: startOfDayUTC, $lt: endOfDayUTC }
     });
 
     res.json(data || { userId, date: new Date(), steps: 0, calories: 0, distance: 0, activeMinutes: 0 });
@@ -90,30 +117,38 @@ app.get('/fitness/stats/:userId/:range', verifyToken, async (req, res) => {
     const { userId, range } = req.params;
     
     // Calculate date range using Cambodia timezone (GMT+7)
-    const today = getCambodiaDateOnly();
-    let startDate;
+    const cambodiaToday = getCambodiaDateOnly();
+    let dayCount;
 
     switch (range) {
       case 'week':
-        // 7 days ago in Cambodia timezone
-        startDate = new Date(today.getTime() - (7 * 86400000));
+        dayCount = 7;
         break;
       case 'month':
-        // 30 days ago in Cambodia timezone
-        startDate = new Date(today.getTime() - (30 * 86400000));
+        dayCount = 30;
         break;
       case 'year':
-        // 365 days ago in Cambodia timezone
-        startDate = new Date(today.getTime() - (365 * 86400000));
+        dayCount = 365;
         break;
       default:
-        // Default to week
-        startDate = new Date(today.getTime() - (7 * 86400000));
+        dayCount = 7;
     }
 
+    // Calculate Cambodia date range
+    const cambodiaStartDate = new Date(cambodiaToday.getTime() - (dayCount * 86400000));
+
+    // Since date is stored as string (ISO format with +07:00), we need to query by string prefix
+    // Format dates as "YYYY-MM-DD" for string comparison
+    const dateFormat = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    const startDateStr = dateFormat(cambodiaStartDate);
+    const todayStr = dateFormat(cambodiaToday);
+
+    // Query using regex pattern to match date strings in range
+    const datePattern = generateDateRange(startDateStr, todayStr);
+    
     const data = await FitnessData.find({
       userId,
-      date: { $gte: startDate }
+      date: { $regex: `^(${datePattern})` }
     }).sort({ date: 1 });
 
     // Calculate statistics
@@ -147,49 +182,103 @@ app.get('/fitness/stats/:userId/:range', verifyToken, async (req, res) => {
 // Log fitness activity
 app.post('/fitness/log', verifyToken, async (req, res) => {
   try {
-    const { userId, date, steps, calories, distance, activeMinutes, heartRate, notes } = req.body;
+    const { userId, date, steps, calories, distance, activeMinutes, notes } = req.body;
 
     if (!userId || !date) {
       return res.status(400).json({ error: 'userId and date required' });
     }
 
-    // Check if entry already exists for this date
-    // Handle timezone properly - use Cambodia timezone (GMT+7) not UTC
-    const inputDate = new Date(date);
-    // Convert to Cambodia time by adding 7 hours
-    const cambodiaInputDate = new Date(inputDate.getTime() + (CAMBODIA_TIMEZONE_OFFSET * 60 * 60 * 1000));
-    const startOfDay = new Date(cambodiaInputDate.getFullYear(), cambodiaInputDate.getMonth(), cambodiaInputDate.getDate(), 0, 0, 0, 0);
-    const endOfDay = new Date(cambodiaInputDate.getFullYear(), cambodiaInputDate.getMonth(), cambodiaInputDate.getDate() + 1, 0, 0, 0, 0);
+    console.log(`\n=== /fitness/log REQUEST ===`);
+    console.log(`User ID: ${userId}`);
+    console.log(`Date received from client: ${date} (type: ${typeof date})`);
+    console.log(`Note: Client sends Cambodia local date, we convert to UTC for storage`);
 
+    let cambodiaLocalDate;
+    let isGmt7DateReceived = false;
+
+    // Handle three date formats:
+    // 1. ISO format with GMT+7: "2025-12-10T00:00:00.000+07:00" ← PREFER THIS
+    // 2. ISO format with UTC: "2025-12-10T00:00:00.000Z" or "2025-12-10T00:00:00.000+00:00"
+    // 3. Simple date string: "2025-12-10"
+    
+    if (date.includes('T')) {
+      // ISO format - check if it has GMT+7 timezone
+      if (date.includes('+07:00') || date.includes('+0700')) {
+        // Already in GMT+7! Just parse and use directly
+        cambodiaLocalDate = new Date(date);
+        isGmt7DateReceived = true;
+      } else {
+        // UTC format - just parse it
+        cambodiaLocalDate = new Date(date);
+      }
+    } else {
+      // Simple date format "yyyy-MM-dd" - client sent Cambodia local date
+      // Parse it as local midnight in Cambodia
+      const dateParts = date.split('-');
+      const year = parseInt(dateParts[0]);
+      const month = parseInt(dateParts[1]) - 1; // Month is 0-based
+      const day = parseInt(dateParts[2]);
+      // This creates a "naive" date that represents midnight in Cambodia timezone
+      cambodiaLocalDate = new Date(year, month, day, 0, 0, 0, 0);
+    }
+
+    // Convert back to ISO string with GMT+7 timezone for storage
+    // This preserves the +07:00 offset and ensures MongoDB stores the correct date
+    let dateForStorage;
+    
+    if (isGmt7DateReceived) {
+      // Already received as GMT+7, use the original date string
+      dateForStorage = date;
+    } else {
+      // Need to format the date as ISO string with GMT+7 offset
+      const year = cambodiaLocalDate.getFullYear();
+      const month = String(cambodiaLocalDate.getMonth() + 1).padStart(2, '0');
+      const day = String(cambodiaLocalDate.getDate()).padStart(2, '0');
+      const hours = String(cambodiaLocalDate.getHours()).padStart(2, '0');
+      const minutes = String(cambodiaLocalDate.getMinutes()).padStart(2, '0');
+      const seconds = String(cambodiaLocalDate.getSeconds()).padStart(2, '0');
+      const milliseconds = String(cambodiaLocalDate.getMilliseconds()).padStart(3, '0');
+      
+      // Format as ISO string with GMT+7 timezone: "2025-12-10T00:00:00.000+07:00"
+      dateForStorage = `${year}-${month}-${day}T${hours}:${minutes}:${seconds}.${milliseconds}+07:00`;
+    }
+
+    // For querying, extract just the date part (yyyy-MM-dd) to find records for this day
+    // Since we now store dates as strings like "2025-12-10T00:00:00.000+07:00"
+    // We can use string comparison or extract the date prefix
+    const datePrefix = dateForStorage.substring(0, 10); // Extract "2025-12-10"
+
+    // Find existing entry for this specific userId and date
+    // Since date is now a string, we use regex to match the date prefix
     let fitnessData = await FitnessData.findOne({
-      userId,
-      date: { $gte: startOfDay, $lt: endOfDay }
+      userId: userId,
+      date: { $regex: `^${datePrefix}` }
     });
 
     if (fitnessData) {
-      // Update existing entry
-      fitnessData.steps = steps || fitnessData.steps;
-      fitnessData.calories = calories || fitnessData.calories;
-      fitnessData.distance = distance || fitnessData.distance;
-      fitnessData.activeMinutes = activeMinutes || fitnessData.activeMinutes;
-      fitnessData.heartRate = heartRate || fitnessData.heartRate;
-      fitnessData.notes = notes || fitnessData.notes;
+      // Update existing entry for this date
+      fitnessData.steps = steps;
+      fitnessData.calories = calories;
+      fitnessData.distance = parseFloat(distance).toFixed(2);
+      fitnessData.activeMinutes = activeMinutes;
+      if (notes) fitnessData.notes = notes;
       fitnessData.updatedAt = new Date();
+      await fitnessData.save();
     } else {
-      // Create new entry
+      // Create new entry for this date
       fitnessData = new FitnessData({
-        userId,
-        date: startOfDay,
+        userId: userId,
+        date: dateForStorage,  // Store GMT+7 date directly in MongoDB
         steps: steps || 0,
         calories: calories || 0,
-        distance: distance || 0,
+        distance: parseFloat(distance || 0).toFixed(2),
         activeMinutes: activeMinutes || 0,
-        heartRate,
-        notes
+        notes: notes || null,
+        createdAt: new Date(),
+        updatedAt: new Date()
       });
+      await fitnessData.save();
     }
-
-    await fitnessData.save();
 
     res.status(201).json({
       success: true,
