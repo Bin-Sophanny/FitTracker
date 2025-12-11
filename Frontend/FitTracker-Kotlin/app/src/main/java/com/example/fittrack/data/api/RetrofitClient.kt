@@ -1,6 +1,5 @@
 package com.example.fittrack.data.api
 
-import android.os.Build
 import com.google.gson.GsonBuilder
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
@@ -13,25 +12,8 @@ import java.util.concurrent.TimeUnit
  */
 object RetrofitClient {
 
-    // TODO: Replace with your backend URL
-    // Automatically detect emulator vs real device
-    private val BASE_URL = if (isEmulator()) {
-        "http://10.0.2.2:3000/" // Emulator
-    } else {
-        "http://192.168.50.249:3000/" // Real device on same WiFi
-    }
-
-    private fun isEmulator(): Boolean {
-        return (Build.FINGERPRINT.startsWith("google/sdk_gphone")
-                || Build.FINGERPRINT.startsWith("generic")
-                || Build.FINGERPRINT.contains("emulator")
-                || Build.MODEL.contains("google_sdk")
-                || Build.MODEL.contains("Emulator")
-                || Build.MODEL.contains("Android SDK built for x86")
-                || Build.MANUFACTURER.contains("Genymotion")
-                || Build.BRAND.startsWith("generic") && Build.DEVICE.startsWith("generic")
-                || "google_sdk" == Build.PRODUCT)
-    }
+    // Cloud API URL (Render deployment)
+    private val BASE_URL = "https://fittrack-api-gateway.onrender.com/"
 
     private val gson = GsonBuilder()
         .setLenient()
