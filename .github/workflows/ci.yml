@@ -6,15 +6,15 @@ on:
   pull_request:
     branches: [ main ]
 
-jobs:
+jobs: 
   backend-tests:
     name: Backend Tests
     runs-on: ubuntu-latest
     steps: 
-      - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with: 
-          node-version: '18'
+          node-version:  '18'
       - name: Install Backend Dependencies
         working-directory: ./Backend
         run: npm install
@@ -23,11 +23,11 @@ jobs:
         run: npm test || echo "Tests will be added later"
 
   android-build:
-    name: Build Android APK
+    name:  Build Android APK
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-java@v3
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '17'
@@ -35,10 +35,10 @@ jobs:
         working-directory: ./Frontend/FitTracker-Kotlin
         run: chmod +x ./gradlew
       - name:  Build Debug APK
-        working-directory:  ./Frontend/FitTracker-Kotlin
-        run: ./gradlew assembleDebug
+        working-directory: ./Frontend/FitTracker-Kotlin
+        run:  ./gradlew assembleDebug
       - name: Upload APK
-        uses: actions/upload-artifact@v3
-        with:
+        uses: actions/upload-artifact@v4
+        with: 
           name: fittracker-apk
           path: Frontend/FitTracker-Kotlin/app/build/outputs/apk/debug/*. apk
