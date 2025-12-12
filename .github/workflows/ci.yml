@@ -41,4 +41,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with: 
           name: fittracker-apk
-          path: Frontend/FitTracker-Kotlin/app/build/outputs/apk/debug/*.apk
+          path: Frontend\FitTracker-Kotlin\app\build\outputs\apk\androidTest\debug*.apk
